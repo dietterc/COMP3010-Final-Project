@@ -1,0 +1,14 @@
+{
+    "tasks": [
+        {
+            "label": "run desktop game",
+            "type": "shell",
+            "command": "./gradlew desktop:run",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
