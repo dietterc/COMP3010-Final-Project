@@ -1,19 +1,16 @@
 package com.mygdx.game;
 
-import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.utils.ScreenUtils;
 
 //Networking
 import java.net.*;
 import java.io.*;
 
-public class ProjectMain extends ApplicationAdapter {
+public class ProjectMain extends Game {
 	SpriteBatch batch;
-	Texture img;
 	private Socket clientSocket;
     private PrintWriter out;
     private BufferedReader in;
@@ -21,8 +18,23 @@ public class ProjectMain extends ApplicationAdapter {
 	@Override
 	public void create() {
 		batch = new SpriteBatch();
-		img = new Texture("badlogic.jpg");
+		this.setScreen(new MainMenu(this));
+		//networkingInit();
+	}
 
+	@Override
+	public void render() {
+		super.render();
+
+		//networkingStep();
+	}
+	
+	@Override
+	public void dispose() {
+		batch.dispose();
+	}
+
+	private void networkingInit() {
 		try {
 			clientSocket = new Socket("127.0.0.1", 6000);
         	out = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -33,24 +45,7 @@ public class ProjectMain extends ApplicationAdapter {
 		}
 	}
 
-	@Override
-	public void render() {
-		ScreenUtils.clear(1, 0, 0, 1);
-		batch.begin();
-		batch.draw(img, 0, 0);
-		batch.end();
-
-		networking();
-
-	}
-	
-	@Override
-	public void dispose() {
-		batch.dispose();
-		img.dispose();
-	}
-
-	private void networking() {
+	private void networkingStep() {
 
 		if(Gdx.input.isKeyJustPressed(Keys.SPACE)) {
 			//System.out.println("test");
@@ -65,6 +60,8 @@ public class ProjectMain extends ApplicationAdapter {
 			}
 
 		}
-
 	}
+
+
+
 }
