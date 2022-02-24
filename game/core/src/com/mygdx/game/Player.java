@@ -11,7 +11,7 @@ public class Player {
     private Body physicsBody;
     private CircleShape circle;
 
-    public Player(World world,float startX, float startY) {
+    public Player(World world, float startX, float startY) {
         
         //Set up physics body as a circle
         BodyDef bodyDef = new BodyDef();
@@ -30,6 +30,10 @@ public class Player {
         fixtureDef.restitution = 0.0f;
         Fixture fixture = physicsBody.createFixture(fixtureDef);
 
+    }
+
+    public Body getBody() {
+        return physicsBody;
     }
     
 }
