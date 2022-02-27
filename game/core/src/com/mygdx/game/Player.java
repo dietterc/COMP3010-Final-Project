@@ -20,6 +20,7 @@ public class Player {
         physicsBody = world.createBody(bodyDef);
         //set rotation
         physicsBody.setFixedRotation(true);
+        physicsBody.setSleepingAllowed(false);
 
         circle = new CircleShape();
         circle.setRadius(.35f);

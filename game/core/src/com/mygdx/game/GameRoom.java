@@ -3,15 +3,18 @@ package com.mygdx.game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.maps.MapLayer;
+import com.badlogic.gdx.maps.MapLayers;
+import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.MapObjects;
+import com.badlogic.gdx.maps.objects.TextureMapObject;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.Body;
-import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
-import com.badlogic.gdx.physics.box2d.CircleShape;
-import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.physics.box2d.joints.RopeJoint;
 import com.badlogic.gdx.physics.box2d.joints.RopeJointDef;
@@ -29,12 +32,12 @@ public class GameRoom implements Screen {
     private Box2DDebugRenderer debugRenderer;
     private Player player;
 
-    private Body testBody;
-    private Body testBody2;
     private Body playerBody;
     RopeJoint RJ;
-    private Array<Body> grappleBodies;
+    private Array<Wall> grappleWalls;
     private float ropeLen;
+
+    boolean clicked;
 
     public GameRoom(final ProjectMain game) {
         this.game = game;
@@ -46,10 +49,11 @@ public class GameRoom implements Screen {
 
         test();
 
-        grappleBodies = new Array<Body>();
-        grappleBodies.add(testBody);
-        grappleBodies.add(testBody2);
+        grappleWalls = new Array<Wall>();
 
+        loadMap();
+
+        clicked = false;
     }
 
     @Override
@@ -120,33 +124,39 @@ public class GameRoom implements Screen {
 
     }
 
+    private void loadMap() {
+       
+
+        TiledMap tiledMap = new TmxMapLoader().load("map.tmx");
+			//TiledMap tiledMap = new TmxMapLoader().load("levels/testlevel.tmx");
+
+        MapLayers layers = tiledMap.getLayers();
+
+        for(MapLayer layer : layers) {
+
+            MapObjects objects = layer.getObjects();
+
+            for(MapObject object : objects) {
+
+                TextureMapObject obj = (TextureMapObject) object;
+
+                Vector3 pos = new Vector3(obj.getX()+32, 3200-obj.getY()-32, 0);
+                camera.unproject(pos);
+
+                grappleWalls.add(new Wall(world,pos.x,pos.y));
+                
+            }
+        }
+
+
+    }
+
     //method for testing stuff
     private void test() {
 
         playerBody = player.getBody();
         ropeLen = 1f;
-        
-        //Test anchors
-        BodyDef bodyDef = new BodyDef();
-        bodyDef.type = BodyDef.BodyType.StaticBody;
-        bodyDef.position.set(0f, 0f); //starting position
-        testBody = world.createBody(bodyDef);
-        CircleShape circle = new CircleShape();
-        circle.setRadius(.35f);
-        FixtureDef fixtureDef = new FixtureDef();
-        fixtureDef.shape = circle;
-        testBody.createFixture(fixtureDef);
-        
-        BodyDef bodyDef2 = new BodyDef();
-        bodyDef2.type = BodyDef.BodyType.StaticBody;
-        bodyDef2.position.set(-3f, 0f); //starting position
-        testBody2 = world.createBody(bodyDef2);
-        CircleShape circle2 = new CircleShape();
-        circle2.setRadius(.35f);
-        FixtureDef fixtureDef2 = new FixtureDef();
-        fixtureDef2.shape = circle2;
-        testBody2.createFixture(fixtureDef2);
-
+         
     }
 
     //step version of test method
@@ -166,13 +176,14 @@ public class GameRoom implements Screen {
         }
 
         if(Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            clicked = true;
             Body clickedBody = null;
             Vector3 pos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
             camera.unproject(pos);
             //find out what body was clicked
-            for(Body body:grappleBodies) {
-                if(pos.dst(body.getPosition().x,body.getPosition().y,0) < .35f) {
-                    clickedBody = body;
+            for(Wall wall:grappleWalls) {
+                if(pos.dst(wall.getBody().getPosition().x,wall.getBody().getPosition().y,0) < .35f) {
+                    clickedBody = wall.getBody();
                 }
             }
             
@@ -191,6 +202,16 @@ public class GameRoom implements Screen {
 
                 RJ = (RopeJoint) world.createJoint(rDef);
 
+            }
+
+        }
+
+        if(!Gdx.input.isButtonPressed(Input.Buttons.LEFT) && clicked) {
+            clicked = false;
+
+            if(RJ != null) {
+                world.destroyJoint(RJ);
+                RJ = null;
             }
 
         }
