@@ -155,7 +155,7 @@ public class MainMenu implements Screen {
     @Override
 	public void dispose() {
 		jmdns.unregisterService(serviceInfo);
-        
+        System.out.println("Hello!");
 	}
 
 

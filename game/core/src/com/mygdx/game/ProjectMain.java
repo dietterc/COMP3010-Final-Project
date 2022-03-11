@@ -2,6 +2,7 @@ package com.mygdx.game;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
@@ -14,11 +15,13 @@ public class ProjectMain extends Game {
 	private Socket clientSocket;
     private PrintWriter out;
     private BufferedReader in;
+	private Screen mainMenu;
 	
 	@Override
 	public void create() {
 		batch = new SpriteBatch();
-		this.setScreen(new MainMenu(this));
+		mainMenu = new MainMenu(this);
+		this.setScreen(mainMenu);
 		//networkingInit();
 	}
 
@@ -32,6 +35,8 @@ public class ProjectMain extends Game {
 	@Override
 	public void dispose() {
 		batch.dispose();
+		mainMenu.dispose();
+
 	}
 
 
