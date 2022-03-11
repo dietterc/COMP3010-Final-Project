@@ -29,6 +29,8 @@ public class MainMenu implements Screen {
 
     private ArrayList<String> peer_list;
 
+    private JmDNS jmdns;
+
     public MainMenu(final ProjectMain game) {
         this.game = game;
         camera = new OrthographicCamera(WIDTH,HEIGHT);
@@ -99,9 +101,9 @@ public class MainMenu implements Screen {
             }
         
         }
-
+        
 		try {
-            JmDNS jmdns = JmDNS.create(InetAddress.getLocalHost());
+            jmdns = JmDNS.create(InetAddress.getLocalHost());
             // Add service listener
             jmdns.addServiceListener("_http._tcp.local.", new mDNSListener());
 
@@ -114,10 +116,9 @@ public class MainMenu implements Screen {
 
         //Broadcast myself as a mDNS service
         try {
-            JmDNS jmdns = JmDNS.create(InetAddress.getLocalHost());
             ServiceInfo serviceInfo = ServiceInfo.create("_http._tcp.local.", "comp3010FP", 1234, "path=index.html");
             jmdns.registerService(serviceInfo);
-
+            
         } catch (IOException e) {
             System.out.println(e.getMessage());
         } 
@@ -152,7 +153,7 @@ public class MainMenu implements Screen {
 
     @Override
 	public void dispose() {
-		
+		jmdns.unregisterAllServices();
 	}
 
 
