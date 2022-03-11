@@ -26,13 +26,14 @@ public class ProjectMain extends Game {
 	public void render() {
 		super.render();
 
-		//networkingStep();
+		networkingStep();
 	}
 	
 	@Override
 	public void dispose() {
 		batch.dispose();
 	}
+
 
 	private void networkingInit() {
 		try {
@@ -47,18 +48,10 @@ public class ProjectMain extends Game {
 
 	private void networkingStep() {
 
-		if(Gdx.input.isKeyJustPressed(Keys.SPACE)) {
+		if(Gdx.input.isKeyJustPressed(Keys.L)) {
 			//System.out.println("test");
 			
-			try {
-				out.println("hello server");
-        		String resp = in.readLine();
-        		System.out.println(resp);
-			} 
-			catch(Exception e) {
-				System.out.println("Error");
-			}
-
+			
 		}
 	}
 

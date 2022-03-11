@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapLayers;
 import com.badlogic.gdx.maps.MapObject;
@@ -24,33 +25,49 @@ import com.badlogic.gdx.utils.ScreenUtils;
 public class GameRoom implements Screen {
     
     final ProjectMain game;
-    final int WIDTH = 20;
+    final float WIDTH = 20;
     final float HEIGHT = 11.25f;
 
+    final float SCREEN_WIDTH = 1440;
+    final float SCREEN_HEIGHT = 810;
+
+
     private OrthographicCamera camera;
+    private OrthographicCamera hudCamera;
+
     private World world;
     private Box2DDebugRenderer debugRenderer;
     private Player player;
+    private OtherPlayer otherPlayer;
 
     private Body playerBody;
     RopeJoint RJ;
     private Array<Wall> grappleWalls;
     private float ropeLen;
 
+    BitmapFont hudFont;
+
     boolean clicked;
 
     public GameRoom(final ProjectMain game) {
         this.game = game;
         camera = new OrthographicCamera(WIDTH,HEIGHT);
+        hudCamera = new OrthographicCamera(1440,810);
+        hudFont = new BitmapFont(Gdx.files.internal("fonts/font.fnt"),
+            Gdx.files.internal("fonts/font.png"), false);
+        hudFont.setColor(0, 0, 0, 1);
+
         world = new World(new Vector2(0,-9.81f), true);
         debugRenderer = new Box2DDebugRenderer();
 
-        player = new Player(world,-5f,0f);
+        player = new Player(world,-5f,-25f);
+        playerBody = player.getBody();
 
-        test();
+        otherPlayer = new OtherPlayer(world, 0f,-37.5f);
+
+        rope_init();
 
         grappleWalls = new Array<Wall>();
-
         loadMap();
 
         clicked = false;
@@ -60,16 +77,32 @@ public class GameRoom implements Screen {
 	public void render(float delta) {
         ScreenUtils.clear(0.5f, 0.5f, 0.5f, 1);
 
-        updateCameraPos();
-		camera.update();
-		game.batch.setProjectionMatrix(camera.combined);
-        
+        //HUD
+        hudCamera.update();
+        game.batch.setProjectionMatrix(hudCamera.combined);
 		game.batch.begin();
+        
+        String message = "Fuel: " + player.getFuel();
+        hudFont.draw(game.batch, message, -700, 375);
 
 		game.batch.end();
 
+
+        //player/world drawing
+        updateCameraPos();
+		camera.update();
+		game.batch.setProjectionMatrix(camera.combined);
+		game.batch.begin();
+        
+		game.batch.end();
+
         //physics
-        test_step();
+        rope_step();
+        player.step();
+
+        if(Gdx.input.isKeyPressed(Input.Keys.P)) {
+            otherPlayer.getBody().setTransform(new Vector2(otherPlayer.getBody().getPosition().x + .02f,-37.5f), 0);
+        }
 
         debugRenderer.render(world, camera.combined);
 		world.step(1/60f, 6, 2);
@@ -139,36 +172,49 @@ public class GameRoom implements Screen {
             for(MapObject object : objects) {
 
                 TextureMapObject obj = (TextureMapObject) object;
-
                 Vector3 pos = new Vector3(obj.getX()+32, 3200-obj.getY()-32, 0);
                 camera.unproject(pos);
-
                 grappleWalls.add(new Wall(world,pos.x,pos.y));
                 
             }
         }
 
-
     }
 
     //method for testing stuff
-    private void test() {
-
-        playerBody = player.getBody();
-        ropeLen = 1f;
-         
+    private void rope_init() {
+        ropeLen = 1f; 
     }
 
     //step version of test method
-    private void test_step() {
+    private void rope_step() {
 
-        if(Gdx.input.isKeyPressed(Input.Keys.W)) {
+        //rope methods
+        if(Gdx.input.isKeyPressed(Input.Keys.Q)) {
             if(ropeLen < 5f)
                 ropeLen += .1f;
         }
-        if(Gdx.input.isKeyPressed(Input.Keys.S)) {
-            if(ropeLen > 0f)
-                ropeLen -= .1f;
+    
+        if(Gdx.input.isKeyPressed(Input.Keys.E)) {
+            if(ropeLen > 0f) {
+                Vector3 mousePos = new Vector3(Gdx.input.getX(),Gdx.input.getY(),0);
+                camera.unproject(mousePos);
+
+                ropeLen -= .05f;
+                int pullForce = 5;
+
+                /* FIX LATER
+                Vector2 velocity = playerBody.getLinearVelocity();
+                float speed = velocity.nor().len();
+                if(speed > 3) {
+                    playerBody.setLinearVelocity(velocity.x * 3,velocity.y * 3);
+                }*/
+            
+                Vector2 direction = new Vector2((mousePos.x - playerBody.getPosition().x)*pullForce, (mousePos.y - playerBody.getPosition().y)*pullForce);
+                playerBody.applyForceToCenter(direction, true);
+
+            }
+                
         }
 
         if(RJ != null) {
@@ -176,13 +222,14 @@ public class GameRoom implements Screen {
         }
 
         if(Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            Vector3 mousePos = new Vector3(Gdx.input.getX(),Gdx.input.getY(),0);
+            camera.unproject(mousePos);
+
             clicked = true;
             Body clickedBody = null;
-            Vector3 pos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-            camera.unproject(pos);
             //find out what body was clicked
             for(Wall wall:grappleWalls) {
-                if(pos.dst(wall.getBody().getPosition().x,wall.getBody().getPosition().y,0) < .35f) {
+                if(mousePos.dst(wall.getBody().getPosition().x,wall.getBody().getPosition().y,0) < .35f) {
                     clickedBody = wall.getBody();
                 }
             }
@@ -215,6 +262,7 @@ public class GameRoom implements Screen {
             }
 
         }
+
 
     }
 

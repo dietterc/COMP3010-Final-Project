@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.*;
 
+import javax.jmdns.JmDNS;
+
 public class GreetServer {
     private ServerSocket serverSocket;
     private Socket clientSocket;
