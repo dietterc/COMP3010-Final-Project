@@ -30,6 +30,7 @@ public class MainMenu implements Screen {
     private ArrayList<String> peer_list;
 
     private JmDNS jmdns;
+    private ServiceInfo serviceInfo;
 
     public MainMenu(final ProjectMain game) {
         this.game = game;
@@ -116,7 +117,7 @@ public class MainMenu implements Screen {
 
         //Broadcast myself as a mDNS service
         try {
-            ServiceInfo serviceInfo = ServiceInfo.create("_http._tcp.local.", "comp3010FP", 1234, "path=index.html");
+            serviceInfo = ServiceInfo.create("_http._tcp.local.", "comp3010FP", 1234, "path=index.html");
             jmdns.registerService(serviceInfo);
             
         } catch (IOException e) {
@@ -153,7 +154,8 @@ public class MainMenu implements Screen {
 
     @Override
 	public void dispose() {
-		jmdns.unregisterAllServices();
+		jmdns.unregisterService(serviceInfo);
+        
 	}
 
 
