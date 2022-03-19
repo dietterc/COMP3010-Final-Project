@@ -1,0 +1,7 @@
+Sending messages is not a negligible cost, send as much as we can in as little data as possible.
+
+
+Cache vs local storage
+
+Cache is automatic, magic (browser stuff) we dont directly use it in code?
+Local storage is a manual cache, like a DB, we store stuff in it, out code uses it.
