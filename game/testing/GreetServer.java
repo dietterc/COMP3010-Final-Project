@@ -1,7 +1,7 @@
 import java.io.*;
 import java.net.*;
+import java.util.concurrent.TimeUnit;
 
-import javax.jmdns.JmDNS;
 
 public class GreetServer {
     private ServerSocket serverSocket;
@@ -11,22 +11,13 @@ public class GreetServer {
 
     public void start(int port) {
         try {
-
-            serverSocket = new ServerSocket(port);
-            clientSocket = serverSocket.accept();
+            clientSocket = new Socket("localhost", 25565);
             out = new PrintWriter(clientSocket.getOutputStream(), true);
-            while(true) {
-                in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                String greeting = in.readLine();
-                if ("hello server".equals(greeting)) {
-                    out.println("hello client");
-                }
-                else {
-                    out.println("unrecognised greeting");
-                }
-            }
+            out.println("msg");
+
         }
         catch(Exception e) {
+
 
         }
     }

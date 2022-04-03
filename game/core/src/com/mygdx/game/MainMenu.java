@@ -18,6 +18,8 @@ public class MainMenu implements Screen {
     private BitmapFont hudFont;
     private String username;
 
+    private Lobby lobby;
+
     public MainMenu(final ProjectMain game) {
         this.game = game;
 
@@ -51,7 +53,8 @@ public class MainMenu implements Screen {
 
         if(!username.equals("")) {
             String id = UUID.randomUUID().toString();
-            game.setScreen(new Lobby(game,username,id));
+            lobby = new Lobby(game,username,id);
+            game.setScreen(lobby);
         }
 
     }
@@ -99,7 +102,7 @@ public class MainMenu implements Screen {
 
     @Override
 	public void dispose() {
-
+        lobby.dispose();
 	}
 
 

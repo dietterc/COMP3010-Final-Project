@@ -1,0 +1,8 @@
+
+message protocol:
+
+'lines' separated by , 
+
+first line is always messagetype:type
+
+following lines depend on the message type
