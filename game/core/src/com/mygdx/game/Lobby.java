@@ -302,7 +302,13 @@ public class Lobby implements Screen {
 		try {
             jmdns = JmDNS.create(InetAddress.getLocalHost());
             // Add service listener
-            jmdns.addServiceListener("_http._tcp.local.", new mDNSListener());
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    jmdns.addServiceListener("_http._tcp.local.", new mDNSListener());
+                }
+             }).start();
 
 
 		} catch (UnknownHostException e) {
@@ -316,7 +322,8 @@ public class Lobby implements Screen {
 
         //Broadcast myself as a mDNS service
         try {
-            serviceInfo = ServiceInfo.create("_http._tcp.local.", "comp3010FP", 5353, (player_id + "," + activePort + "," + username));
+            serviceInfo = ServiceInfo.create("_http._tcp.local.", "comp3010FP", 25567, (player_id + "," + activePort + "," + username));
+            
             jmdns.registerService(serviceInfo);
             
         } catch (IOException e) {
