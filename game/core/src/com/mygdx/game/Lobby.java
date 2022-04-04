@@ -73,7 +73,13 @@ public class Lobby implements Screen {
         messageQueue = new ConcurrentLinkedQueue<String>();
 
         tcpSetup();
-        mdnsSetup();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                mdnsSetup();
+            }
+        }).start();
+        
         
     }
 
@@ -302,13 +308,7 @@ public class Lobby implements Screen {
 		try {
             jmdns = JmDNS.create(InetAddress.getLocalHost());
             // Add service listener
-
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    jmdns.addServiceListener("_http._tcp.local.", new mDNSListener());
-                }
-             }).start();
+            jmdns.addServiceListener("_http._tcp.local.", new mDNSListener());
 
 
 		} catch (UnknownHostException e) {
