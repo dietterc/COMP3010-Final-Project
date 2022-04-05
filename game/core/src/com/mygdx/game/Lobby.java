@@ -407,7 +407,7 @@ public class Lobby implements Screen {
                     String data = event.getInfo().getNiceTextString().substring(1);
                     PeerInfo newPeer = new PeerInfo(serviceInfo.getInet4Addresses()[0] + "",event.getInfo(),data);
 
-                    System.out.println(serviceInfo.getHostAddresses()[0]);
+                    
                     //check if they are already here
                     boolean found = false;
                     for(Peer peer : peer_list) {
@@ -468,6 +468,14 @@ public class Lobby implements Screen {
         if(!found) {
             peer_list.add(newPeer);
             //send any messages here that you would like to tell the new peer
+            try {
+                String ip = InetAddress.getLocalHost().getHostAddress();
+                //newPeer.sendMessage("messagetype:connect," + ip + "," + activePort + "," + player_id);
+                System.out.println(ip);
+            }
+            catch(UnknownHostException e) {
+                e.printStackTrace();
+            }
             newPeer.sendMessage("messagetype:status," + ready + "," + player_id);
 
             if(peer_list.size() == 1) {
