@@ -53,6 +53,7 @@ public class MainMenu implements Screen {
 
         if(!username.equals("")) {
             String id = UUID.randomUUID().toString();
+            //game.setScreen(new GameRoom(game));
             lobby = new Lobby(game,username,id);
             game.setScreen(lobby);
         }

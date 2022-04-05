@@ -85,6 +85,11 @@ public class GameRoom implements Screen {
         String message = "Fuel: " + player.getFuel();
         hudFont.draw(game.batch, message, -700, 375);
 
+        double x = playerBody.getPosition().x;
+        double y = playerBody.getPosition().y;
+
+        hudFont.draw(game.batch, "X:" + x + "\nY:" + y, -700, 275);
+
 		game.batch.end();
 
 

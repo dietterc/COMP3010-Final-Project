@@ -1,5 +1,6 @@
 package com.mygdx.game;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
@@ -13,10 +14,12 @@ import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
+import javax.swing.text.StyledEditorKit.BoldAction;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -30,6 +33,9 @@ public class Lobby implements Screen {
     
     final ProjectMain game;
     final int startingPort = 25565;
+    final int COUNTDOWN = 6000;
+    final double xSpawnPoints[] = {0.25,1.5,2.75,4.25,5.50,6.85,8.25,16.25,17.5,18.9,20.25,21.5,22.9,24.25};
+    final double ySpawnPoint = -15.25;
 
     private OrthographicCamera hudCamera;
     private BitmapFont hudFont;
@@ -52,6 +58,14 @@ public class Lobby implements Screen {
     private String username;
     private String player_id;
 
+    private double startingX;
+    private double startingY;
+    private boolean isIt;
+
+    //startup
+    long countdownTarget;
+    boolean countingDown;
+
     public Lobby(final ProjectMain game, String username, String player_id) {
         this.game = game;
         hudCamera = new OrthographicCamera(1440,810);
@@ -73,14 +87,14 @@ public class Lobby implements Screen {
         messageQueue = new ConcurrentLinkedQueue<String>();
 
         tcpSetup();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                mdnsSetup();
-            }
-        }).start();
-        
-        
+        mdnsSetup();
+
+        countdownTarget = 0;
+        countingDown = false;
+
+        startingX = 0;
+        startingY = 0;
+        isIt = false;
     }
 
     @Override
@@ -111,7 +125,6 @@ public class Lobby implements Screen {
                 statusFont.setColor(Color.RED);
                 statusFont.draw(game.batch, "Not Ready", -700, yIndex - 82);
             }
-
         }
 
         //https://stackoverflow.com/questions/2255500/can-i-multiply-strings-in-java-to-repeat-sequences
@@ -131,16 +144,39 @@ public class Lobby implements Screen {
         if(isHost)
             smallFont.draw(game.batch, "You are the host.", 0, -110);
 
+
+        //countdown timer
+        if(countingDown) {
+            int time = (int)(countdownTarget - System.currentTimeMillis()) / 1000;
+
+            if(time >= 0) {
+                hudFont.draw(game.batch, "Starting in: " + time, -100, -200);
+            }
+            else {
+                hudFont.draw(game.batch, "Starting game...", -100, -200);
+                //move to game room here
+            }
+        }
+
+        //test info
+        smallFont.draw(game.batch, "debug info", -50, 375);
+        smallFont.draw(game.batch, "X: " + startingX, -50, 350);
+        smallFont.draw(game.batch, "Y: " + startingY, -50, 325);
+        smallFont.draw(game.batch, "IT: " + isIt, -50, 300);
+
 		game.batch.end();
 
 
         if(Gdx.input.isKeyJustPressed(Keys.SPACE)) {
             //game.setScreen(new GameRoom(game));
             ready = !ready;
-            for(Peer p : peer_list) {
-                p.sendMessage("messagetype:status," + ready + "," + player_id);
-            }
+            sendAllMessage("messagetype:status," + ready + "," + player_id);
             checkReadyStatus();
+
+            if(!ready && countingDown) {
+                countingDown = false;
+                sendAllMessage("messagetype:abortCountdown");
+            }
         }
 
         if(!messageQueue.isEmpty()) {
@@ -154,6 +190,12 @@ public class Lobby implements Screen {
             isHost = false;
         }
 
+    }
+
+    void sendAllMessage(String message) {
+        for(Peer p : peer_list) {
+            p.sendMessage(message);
+        }
     }
 
     void handleMessage(String message) {
@@ -209,6 +251,29 @@ public class Lobby implements Screen {
                         }
                     }
                 }
+            } 
+            else if(type.equals("startCountdown")) {
+                System.out.println("startCountDown");
+                startCountdown(Long.parseLong(lines[1]));
+            }
+            else if(type.equals("verifyLevel")) {
+                int myHash = calculateHash();
+
+                if(myHash != Integer.parseInt(lines[1])) {
+                    //abort starting countdown
+                    ready = false;
+                    sendAllMessage("messagetype:abortCountdown");
+                }
+            }
+            else if(type.equals("abortCountdown")) {
+                System.out.println("ABORT");
+                ready = false;
+                countingDown = false;
+                sendAllMessage("messagetype:status," + ready + "," + player_id);
+            }//startingInfo
+            else if(type.equals("startingInfo")) {
+                //x, y, it
+                setStartingData(Double.parseDouble(lines[1]), Double.parseDouble(lines[2]), Boolean.parseBoolean(lines[3]));
             }
 
         }
@@ -216,6 +281,16 @@ public class Lobby implements Screen {
             System.out.println("Invalid message:\n" + message);
         }
         
+    }
+
+    private int calculateHash() {
+        //simple hash function (sum the chars)
+        String file = Gdx.files.local("map.tmx").readString();
+        int sum = 0;
+        for(int i=0;i<file.length();i++) {
+            sum += (int)file.charAt(i);
+        }
+        return sum;
     }
 
     private void checkReadyStatus() {
@@ -228,8 +303,53 @@ public class Lobby implements Screen {
 
         if(score == peer_list.size() && ready) {
             System.out.println("All peers ready!");
+
+            if(score > -1) {
+                long time = System.currentTimeMillis() + COUNTDOWN;
+                sendAllMessage("messagetype:startCountdown," + time);
+                
+                startCountdown(time);
+            }   
+        }
+    }
+
+    private void startCountdown(long time) {
+        countdownTarget = time;
+        countingDown = true;
+
+        //send level data to peers to verify it matches everyone
+        int levelHash = calculateHash();
+        sendAllMessage("messagetype:verifyLevel," + levelHash);
+
+        //host duties
+        if(isHost) {
+            
+            int it = (int)(Math.random() * peer_list.size()+1);
+
+            double[][] spawnPoints = new double[peer_list.size()+1][2]; 
+            for(int i=0;i<peer_list.size()+1;i++) {
+                if(i == it) {
+                    spawnPoints[i][0] = 11.5;
+                    spawnPoints[i][1] = 2.3;
+                }
+                else {
+                    spawnPoints[i][0] = xSpawnPoints[i];
+                    spawnPoints[i][1] = ySpawnPoint;
+                }
+            }
+
+            for(int i=0;i<peer_list.size();i++) {
+                peer_list.get(i).sendMessage("messagetype:startingInfo," + spawnPoints[i][0] + "," + spawnPoints[i][1] + "," + (i == it));
+            }
+            setStartingData(spawnPoints[peer_list.size()][0],spawnPoints[peer_list.size()][1],(it == peer_list.size()));
         }
 
+    }
+
+    void setStartingData(double x, double y, boolean it) {
+        startingX = x;
+        startingY = y;
+        isIt = it;
     }
 
     private void tcpSetup() {
@@ -287,6 +407,7 @@ public class Lobby implements Screen {
                     String data = event.getInfo().getNiceTextString().substring(1);
                     PeerInfo newPeer = new PeerInfo(serviceInfo.getInet4Addresses()[0] + "",event.getInfo(),data);
 
+                    System.out.println(serviceInfo.getHostAddresses()[0]);
                     //check if they are already here
                     boolean found = false;
                     for(Peer peer : peer_list) {
@@ -318,7 +439,6 @@ public class Lobby implements Screen {
         } 
 
         //add myself to the list of peers
-        //peer_list.add(new PeerInfo(serviceInfo.getInet4Addresses()[0] + "",event.getInfo(),player_id));
 
         //Broadcast myself as a mDNS service
         try {
