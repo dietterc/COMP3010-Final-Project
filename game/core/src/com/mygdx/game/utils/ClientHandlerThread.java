@@ -29,7 +29,6 @@ public class ClientHandlerThread extends Thread {
                 if(message != null) {
                     if(message.startsWith("Inital Connect:")) {
                         myId = message.split(":")[1];
-
                     }
                     else {
                         Lobby.messageQueue.add(message);

@@ -275,6 +275,29 @@ public class Lobby implements Screen {
                 //x, y, it
                 setStartingData(Double.parseDouble(lines[1]), Double.parseDouble(lines[2]), Boolean.parseBoolean(lines[3]));
             }
+            else if(type.equals("checkConnection")) {
+                //someone connected to us, are we connected to them?
+
+                String ip = lines[1];
+                int port = Integer.parseInt(lines[2]);
+                String id = lines[3];
+                String user = lines[4];
+
+                boolean found = false;
+                for(Peer p : peer_list) {
+                    if(p.peer_id.equals(id))
+                        found = true;
+                }
+
+                if(!found) {
+                    PeerInfo newPeer = new PeerInfo(ip, id, port, user);
+
+                    System.out.println("Client " + player_id + " discovered: " + newPeer.peer_id);
+                    connectToPeer(newPeer);
+                }
+                
+            }
+
 
         }
         catch(Exception e) {
@@ -470,8 +493,7 @@ public class Lobby implements Screen {
             //send any messages here that you would like to tell the new peer
             try {
                 String ip = InetAddress.getLocalHost().getHostAddress();
-                //newPeer.sendMessage("messagetype:connect," + ip + "," + activePort + "," + player_id);
-                System.out.println(ip);
+                newPeer.sendMessage("messagetype:checkConnection," + ip + "," + activePort + "," + player_id + "," + username);
             }
             catch(UnknownHostException e) {
                 e.printStackTrace();

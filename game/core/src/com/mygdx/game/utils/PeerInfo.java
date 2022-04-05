@@ -20,4 +20,11 @@ public class PeerInfo {
         this.ip = split[1];
     }
 
+    public PeerInfo(String ip, String id, int port, String username) {
+        this.ip = ip;
+        this.peer_id = id;
+        this.port = port;
+        this.username = username;
+    }
+
 }
