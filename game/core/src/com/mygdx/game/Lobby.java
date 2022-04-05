@@ -277,7 +277,7 @@ public class Lobby implements Screen {
             }
             else if(type.equals("checkConnection")) {
                 //someone connected to us, are we connected to them?
-
+                System.out.println("Check");
                 String ip = lines[1];
                 int port = Integer.parseInt(lines[2]);
                 String id = lines[3];
