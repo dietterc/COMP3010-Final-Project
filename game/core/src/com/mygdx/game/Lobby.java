@@ -437,8 +437,16 @@ public class Lobby implements Screen {
 
                 if(event.getName().equals("comp3010FP") && !event.getInfo().getNiceTextString().equals("\\00")) {
                     String data = event.getInfo().getNiceTextString().substring(1);
-                    PeerInfo newPeer = new PeerInfo(event.getInfo().getInet4Addresses()[0] + "",event.getInfo(),data);
-                    
+                    String ipUnformatted = "";
+
+                    for(int i=0;i<event.getInfo().getInet4Addresses().length;i++){
+                        if(!event.getInfo().getInet4Addresses()[i].getHostAddress().startsWith("/127")) {
+                            ipUnformatted = event.getInfo().getInet4Addresses()[i].getHostAddress();
+                        }
+                    }
+                    PeerInfo newPeer = new PeerInfo(ipUnformatted,event.getInfo(),data);
+                
+
                     //check if they are already here
                     boolean found = false;
                     for(Peer peer : peer_list) {
