@@ -16,8 +16,7 @@ public class PeerInfo {
         this.port = Integer.parseInt(data.split(",")[1]);
         this.username = data.split(",")[2];
 
-        String[] split = ip_unformatted.split("/");
-        this.ip = split[1];
+        this.ip = ip_unformatted;
     }
 
     public PeerInfo(String ip, String id, int port, String username) {

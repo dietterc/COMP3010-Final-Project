@@ -440,7 +440,8 @@ public class Lobby implements Screen {
                     String ipUnformatted = "";
 
                     for(int i=0;i<event.getInfo().getInet4Addresses().length;i++){
-                        if(!event.getInfo().getInet4Addresses()[i].getHostAddress().startsWith("/127")) {
+                        System.out.println(event.getInfo().getInet4Addresses()[i].getHostAddress());
+                        if(!event.getInfo().getInet4Addresses()[i].getHostAddress().startsWith("127")) {
                             ipUnformatted = event.getInfo().getInet4Addresses()[i].getHostAddress();
                         }
                     }
