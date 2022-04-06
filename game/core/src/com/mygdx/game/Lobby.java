@@ -8,14 +8,18 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
-import javax.swing.text.StyledEditorKit.BoldAction;
 
+
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Input.Keys;
@@ -51,22 +55,24 @@ public class Lobby implements Screen {
     private Socket clientSocket;
     private int activePort = startingPort;
     public static ConcurrentLinkedQueue<String> messageQueue;
+    public static boolean inLobby;
     private boolean ready;
     private long startTime;
-    private boolean isHost;
+    public static boolean isHost;
 
-    private String username;
-    private String player_id;
+    public static String username;
+    public static String player_id;
 
-    private double startingX;
-    private double startingY;
-    private boolean isIt;
+    public static double startingX;
+    public static double startingY;
+
+    private GameRoom gm = null;
 
     //startup
     long countdownTarget;
     boolean countingDown;
 
-    public Lobby(final ProjectMain game, String username, String player_id) {
+    public Lobby(final ProjectMain game, String given_username, String given_player_id) {
         this.game = game;
         hudCamera = new OrthographicCamera(1440,810);
         hudFont = new BitmapFont(Gdx.files.internal("fonts/font.fnt"),
@@ -78,13 +84,14 @@ public class Lobby implements Screen {
 
         peer_list = new ArrayList<Peer>();
 
-        this.username = username;
-        this.player_id = player_id;
+        username = given_username;
+        player_id = given_player_id;
         ready = false;
         startTime = System.currentTimeMillis();
         isHost = false;
 
         messageQueue = new ConcurrentLinkedQueue<String>();
+        inLobby = true;
 
         tcpSetup();
         mdnsSetup();
@@ -94,7 +101,6 @@ public class Lobby implements Screen {
 
         startingX = 0;
         startingY = 0;
-        isIt = false;
     }
 
     @Override
@@ -155,6 +161,8 @@ public class Lobby implements Screen {
             else {
                 hudFont.draw(game.batch, "Starting game...", -100, -200);
                 //move to game room here
+                inLobby = false;
+                game.setScreen(new GameRoom(game));
             }
         }
 
@@ -162,7 +170,6 @@ public class Lobby implements Screen {
         smallFont.draw(game.batch, "debug info", -50, 375);
         smallFont.draw(game.batch, "X: " + startingX, -50, 350);
         smallFont.draw(game.batch, "Y: " + startingY, -50, 325);
-        smallFont.draw(game.batch, "IT: " + isIt, -50, 300);
 
 		game.batch.end();
 
@@ -273,29 +280,7 @@ public class Lobby implements Screen {
             }//startingInfo
             else if(type.equals("startingInfo")) {
                 //x, y, it
-                setStartingData(Double.parseDouble(lines[1]), Double.parseDouble(lines[2]), Boolean.parseBoolean(lines[3]));
-            }
-            else if(type.equals("checkConnection")) {
-                //someone connected to us, are we connected to them?
-                System.out.println("Check");
-                String ip = lines[1];
-                int port = Integer.parseInt(lines[2]);
-                String id = lines[3];
-                String user = lines[4];
-
-                boolean found = false;
-                for(Peer p : peer_list) {
-                    if(p.peer_id.equals(id))
-                        found = true;
-                }
-
-                if(!found) {
-                    PeerInfo newPeer = new PeerInfo(ip, id, port, user);
-
-                    System.out.println("Client " + player_id + " discovered: " + newPeer.peer_id);
-                    connectToPeer(newPeer);
-                }
-                
+                setStartingData(Double.parseDouble(lines[1]), Double.parseDouble(lines[2]));
             }
 
 
@@ -319,12 +304,18 @@ public class Lobby implements Screen {
     private void checkReadyStatus() {
 
         int score = 0;
+        boolean hostFound = false;
         for(Peer p : peer_list) {
             if(p.ready)
                 score++;
-        }
 
-        if(score == peer_list.size() && ready) {
+            if(p.isHost)
+                hostFound = true;
+        }
+        if(isHost)
+            hostFound = true;
+
+        if(score == peer_list.size() && ready && hostFound) {
             System.out.println("All peers ready!");
 
             if(score > -1) {
@@ -346,33 +337,30 @@ public class Lobby implements Screen {
 
         //host duties
         if(isHost) {
-            
-            int it = (int)(Math.random() * peer_list.size()+1);
 
             double[][] spawnPoints = new double[peer_list.size()+1][2]; 
+            List<Double> xPoints = new ArrayList<Double>();
+            for(int i=0;i<xSpawnPoints.length;i++) {
+                xPoints.add(xSpawnPoints[i]);
+            }
+            Collections.shuffle(xPoints);
+
             for(int i=0;i<peer_list.size()+1;i++) {
-                if(i == it) {
-                    spawnPoints[i][0] = 11.5;
-                    spawnPoints[i][1] = 2.3;
-                }
-                else {
-                    spawnPoints[i][0] = xSpawnPoints[i];
-                    spawnPoints[i][1] = ySpawnPoint;
-                }
+                spawnPoints[i][0] = xPoints.get(i);
+                spawnPoints[i][1] = ySpawnPoint;
             }
 
             for(int i=0;i<peer_list.size();i++) {
-                peer_list.get(i).sendMessage("messagetype:startingInfo," + spawnPoints[i][0] + "," + spawnPoints[i][1] + "," + (i == it));
+                peer_list.get(i).sendMessage("messagetype:startingInfo," + spawnPoints[i][0] + "," + spawnPoints[i][1]);
             }
-            setStartingData(spawnPoints[peer_list.size()][0],spawnPoints[peer_list.size()][1],(it == peer_list.size()));
+            setStartingData(spawnPoints[peer_list.size()][0],spawnPoints[peer_list.size()][1]);
         }
 
     }
 
-    void setStartingData(double x, double y, boolean it) {
+    void setStartingData(double x, double y) {
         startingX = x;
         startingY = y;
-        isIt = it;
     }
 
     private void tcpSetup() {
@@ -428,8 +416,7 @@ public class Lobby implements Screen {
 
                 if(event.getName().equals("comp3010FP") && !event.getInfo().getNiceTextString().equals("\\00")) {
                     String data = event.getInfo().getNiceTextString().substring(1);
-                    PeerInfo newPeer = new PeerInfo(serviceInfo.getInet4Addresses()[0] + "",event.getInfo(),data);
-
+                    PeerInfo newPeer = new PeerInfo(event.getInfo().getInet4Addresses()[0] + "",event.getInfo(),data);
                     
                     //check if they are already here
                     boolean found = false;
@@ -488,16 +475,10 @@ public class Lobby implements Screen {
             }
         }
 
-        if(!found) {
+        if(!found && !player_id.equals(newPeer.peer_id)) {
             peer_list.add(newPeer);
             //send any messages here that you would like to tell the new peer
-            try {
-                String ip = InetAddress.getLocalHost().getHostAddress();
-                newPeer.sendMessage("messagetype:checkConnection," + ip + "," + activePort + "," + player_id + "," + username);
-            }
-            catch(UnknownHostException e) {
-                e.printStackTrace();
-            }
+            
             newPeer.sendMessage("messagetype:status," + ready + "," + player_id);
 
             if(peer_list.size() == 1) {

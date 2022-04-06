@@ -2,6 +2,8 @@ package com.mygdx.game.utils;
 import java.io.*;
 import java.net.*;
 
+import com.badlogic.gdx.Game;
+import com.mygdx.game.GameRoom;
 import com.mygdx.game.Lobby;
 
 public class ClientHandlerThread extends Thread {
@@ -31,7 +33,10 @@ public class ClientHandlerThread extends Thread {
                         myId = message.split(":")[1];
                     }
                     else {
-                        Lobby.messageQueue.add(message);
+                        if(Lobby.inLobby)
+                            Lobby.messageQueue.add(message);
+                        else
+                            GameRoom.messageQueue_gameroom.add(message);
                     }
 
                     writer.write("Echo: " + message);
@@ -44,17 +49,30 @@ public class ClientHandlerThread extends Thread {
             socket.close();
         } catch (Exception ex) {
             //System.out.println("Server exception: " + ex.getMessage());
-            //ex.printStackTrace();
+            ex.printStackTrace();
             Peer me = null;
-            for(Peer p : Lobby.peer_list) {
-                if(p.peer_id.equals(myId)) {
-                    me = p;
+            if(Lobby.inLobby) {
+                for(Peer p : Lobby.peer_list) {
+                    if(p.peer_id.equals(myId)) {
+                        me = p;
+                    }
+                }
+                if(me != null) {
+                    Lobby.peer_list.remove(me);
+                    System.out.println("Removing " + me.peer_id + " from peer list.");
+
                 }
             }
-            if(me != null) {
-                Lobby.peer_list.remove(me);
-                System.out.println("Removing " + me.peer_id + " from peer list.");
-
+            else {
+                for(Peer p : GameRoom.peer_list) {
+                    if(p.peer_id.equals(myId)) {
+                        me = p;
+                    }
+                }
+                if(me != null) {
+                    GameRoom.peer_list.remove(me);
+                    System.out.println("Removing " + me.peer_id + " from peer list.");
+                }
             }
         } 
 

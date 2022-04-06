@@ -1,6 +1,10 @@
 package com.mygdx.game;
 
  
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.CircleShape;
@@ -10,16 +14,21 @@ import com.badlogic.gdx.physics.box2d.World;
 public class OtherPlayer {
     private Body physicsBody;
     private CircleShape circle;
+    private Sprite sprite;
 
     public OtherPlayer(World world, float startX, float startY) {
         
         init_physics(startX, startY, world);
-
+        
+        sprite = new Sprite(new Texture(Gdx.files.internal("player.png")));
+        sprite.setPosition(physicsBody.getPosition().x, physicsBody.getPosition().y);
+        sprite.setBounds(0,0,.80f,.80f);
+        sprite.setOriginCenter();
     }
 
-    public void step() {
-        
-        
+    public void step(SpriteBatch batch) {
+        sprite.setPosition(physicsBody.getPosition().x-.4f, physicsBody.getPosition().y-.4f);
+        sprite.draw(batch);
     }
 
     public Body getBody() {

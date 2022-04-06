@@ -5,6 +5,11 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.mygdx.game.OtherPlayer;
+
 
 public class Peer {
 
@@ -17,6 +22,10 @@ public class Peer {
 
     private Socket socket;
     private BufferedWriter out;
+
+    //Game room stuff
+    public OtherPlayer playerInfo;
+    public boolean isIt;
 
     public Peer(String ip, String peer_id, int port, String serverId, String name) {
         this.ip = ip;
@@ -38,6 +47,9 @@ public class Peer {
             e.printStackTrace();
         }
 
+        playerInfo = null;
+        isIt = false;
+
     }
 
     public void sendMessage(String message) {
@@ -50,6 +62,11 @@ public class Peer {
             e.printStackTrace();
         }
         
+    }
+
+    public void initGameVars(OtherPlayer playerInfo) {
+        this.playerInfo = playerInfo;
+
     }
 
     public void close() {
