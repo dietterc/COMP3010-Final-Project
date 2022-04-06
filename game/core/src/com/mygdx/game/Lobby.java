@@ -282,6 +282,27 @@ public class Lobby implements Screen {
                 //x, y, it
                 setStartingData(Double.parseDouble(lines[1]), Double.parseDouble(lines[2]));
             }
+            else if(type.equals("checkMutual")) {
+                String who = lines[1];
+                int port = Integer.parseInt(lines[2]);
+                String userN = lines[3];
+                String ip = lines[4];
+
+                boolean found = false;
+                for(Peer p:peer_list) {
+                    if(p.peer_id.equals(who)) {
+                        found = true;
+                    }
+                }
+
+                if(!found && !who.equals(player_id)) {
+                    PeerInfo newPeer = new PeerInfo(ip, who, port, userN); 
+                    
+                    System.out.println("Client " + player_id + " discovered: " + newPeer.peer_id);
+                    connectToPeer(newPeer);
+
+                }
+            }
 
 
         }
@@ -478,7 +499,15 @@ public class Lobby implements Screen {
         if(!found && !player_id.equals(newPeer.peer_id)) {
             peer_list.add(newPeer);
             //send any messages here that you would like to tell the new peer
-            
+            //ask if this connection is mutual
+            String ip = "";
+            try {
+                ip = InetAddress.getLocalHost().getHostAddress();
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+            newPeer.sendMessage("messagetype:checkMutual," + player_id + "," + activePort + "," + username + "," + ip);
+
             newPeer.sendMessage("messagetype:status," + ready + "," + player_id);
 
             if(peer_list.size() == 1) {
