@@ -440,13 +440,17 @@ public class Lobby implements Screen {
                     String ipUnformatted = "";
 
                     for(int i=0;i<event.getInfo().getInet4Addresses().length;i++){
-                        System.out.println(event.getInfo().getInet4Addresses()[i].getHostAddress());
-                        if(!event.getInfo().getInet4Addresses()[i].getHostAddress().startsWith("127")) {
-                            ipUnformatted = event.getInfo().getInet4Addresses()[i].getHostAddress();
+                        if(!(event.getInfo().getInet4Addresses()[i]+"").startsWith("/127")) {
+                            ipUnformatted = event.getInfo().getInet4Addresses()[i]+"";
                         }
+                        
                     }
+
                     PeerInfo newPeer = new PeerInfo(ipUnformatted,event.getInfo(),data);
-                
+                    
+                    for(int i=0;i<event.getInfo().getInet4Addresses().length;i++){
+                        System.out.println(event.getInfo().getInet4Addresses()[i]);
+                    }
 
                     //check if they are already here
                     boolean found = false;
