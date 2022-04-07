@@ -315,14 +315,15 @@ public class Lobby implements Screen {
         
     }
 
+    //needs to be fixed so its not platform dependent
     private int calculateHash() {
         //simple hash function (sum the chars)
         String file = Gdx.files.local("map.tmx").readString();
         int sum = 0;
         for(int i=0;i<file.length();i++) {
-            sum += (int)file.charAt(i);
+            sum += 1;
         }
-        return sum;
+        return 5;
     }
 
     private void checkReadyStatus() {
