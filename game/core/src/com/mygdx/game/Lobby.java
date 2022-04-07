@@ -282,7 +282,10 @@ public class Lobby implements Screen {
                 //x, y, it
                 setStartingData(Double.parseDouble(lines[1]), Double.parseDouble(lines[2]));
             }
-            else if(type.equals("checkMutual")) {
+            else if(type.equals("checkIfConnected")) {
+                //check if we are connected to this peer (or if its us)
+                //if its not, connect to it
+                //this allows all peers to connect to everyone as long as someone discovers at least 1 peer
                 String who = lines[1];
                 int port = Integer.parseInt(lines[2]);
                 String userN = lines[3];
@@ -447,10 +450,6 @@ public class Lobby implements Screen {
                     }
 
                     PeerInfo newPeer = new PeerInfo(ipUnformatted,event.getInfo(),data);
-                    
-                    for(int i=0;i<event.getInfo().getInet4Addresses().length;i++){
-                        System.out.println(event.getInfo().getInet4Addresses()[i]);
-                    }
 
                     //check if they are already here
                     boolean found = false;
@@ -512,14 +511,18 @@ public class Lobby implements Screen {
         if(!found && !player_id.equals(newPeer.peer_id)) {
             peer_list.add(newPeer);
             //send any messages here that you would like to tell the new peer
-            //ask if this connection is mutual
             String ip = "";
             try {
                 ip = InetAddress.getLocalHost().getHostAddress();
             } catch (UnknownHostException e) {
                 e.printStackTrace();
             }
-            newPeer.sendMessage("messagetype:checkMutual," + player_id + "," + activePort + "," + username + "," + ip);
+            //ask if this connection is mutual
+            newPeer.sendMessage("messagetype:checkIfConnected," + player_id + "," + activePort + "," + username + "," + ip);
+            //send them a list of all of our peers too
+            for(Peer p: peer_list) {
+                newPeer.sendMessage("messagetype:checkIfConnected," + p.peer_id + "," + p.port + "," + p.name + "," + p.ip);
+            }
 
             newPeer.sendMessage("messagetype:status," + ready + "," + player_id);
 
