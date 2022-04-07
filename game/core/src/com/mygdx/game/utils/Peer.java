@@ -31,6 +31,7 @@ public class Peer {
         this.ip = ip;
         this.peer_id = peer_id;
         this.name = name;
+        this.port = port;
 
         ready = false;
         isHost = false;

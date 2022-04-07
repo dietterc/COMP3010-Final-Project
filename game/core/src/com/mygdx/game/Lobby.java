@@ -286,6 +286,8 @@ public class Lobby implements Screen {
                 //check if we are connected to this peer (or if its us)
                 //if its not, connect to it
                 //this allows all peers to connect to everyone as long as someone discovers at least 1 peer
+                System.out.println("Checking if im connected to: " + lines[4] + ", " + lines[2]);
+
                 String who = lines[1];
                 int port = Integer.parseInt(lines[2]);
                 String userN = lines[3];
