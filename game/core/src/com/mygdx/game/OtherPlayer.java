@@ -14,7 +14,7 @@ import com.badlogic.gdx.physics.box2d.World;
 public class OtherPlayer {
     private Body physicsBody;
     private CircleShape circle;
-    private Sprite sprite;
+    public Sprite sprite;
 
     public OtherPlayer(World world, float startX, float startY) {
         
@@ -35,6 +35,16 @@ public class OtherPlayer {
         return physicsBody;
     }
 
+    public void setItSprite(boolean set) {
+
+        if(set) {
+            sprite.setTexture(new Texture(Gdx.files.internal("itPlayer.png")));
+        }
+        else {
+            sprite.setTexture(new Texture(Gdx.files.internal("player.png")));
+        }
+
+    }
 
     public void init_physics(float startX, float startY, World world) {
         //Set up physics body as a circle, specifically a STATIC body. Since I think we will only be setting its pos directly

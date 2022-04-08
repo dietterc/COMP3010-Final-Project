@@ -26,6 +26,8 @@ public class Peer {
     //Game room stuff
     public OtherPlayer playerInfo;
     public boolean isIt;
+    public int score;
+    public long stolenTime;
 
     public Peer(String ip, String peer_id, int port, String serverId, String name) {
         this.ip = ip;
@@ -50,6 +52,8 @@ public class Peer {
 
         playerInfo = null;
         isIt = false;
+        score = 0;
+        stolenTime = 0;
 
     }
 

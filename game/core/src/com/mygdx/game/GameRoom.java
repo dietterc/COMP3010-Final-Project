@@ -1,6 +1,8 @@
 package com.mygdx.game;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.badlogic.gdx.Gdx;
@@ -11,7 +13,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapLayers;
 import com.badlogic.gdx.maps.MapObject;
@@ -45,7 +46,6 @@ public class GameRoom implements Screen {
     private World world;
     private Box2DDebugRenderer debugRenderer;
     private Player player;
-    private OtherPlayer otherPlayer;
 
     private Body playerBody;
     RopeJoint RJ;
@@ -54,9 +54,16 @@ public class GameRoom implements Screen {
 
     BitmapFont hudFont;
     BitmapFont nameFont;
+    BitmapFont smallFont;
+
     boolean clicked;
     boolean orbCollected;
     long timeCollected;
+    boolean isIt;
+    long targetTime;
+    int score;
+    long scoreTimer;
+    long taggedTime;
 
     //sprites
     Sprite orbSprite;
@@ -80,6 +87,8 @@ public class GameRoom implements Screen {
         hudFont.setColor(0, 0, 0, 1);
         nameFont = new BitmapFont(Gdx.files.internal("fonts/playername.fnt"),
             Gdx.files.internal("fonts/playername.png"), false);
+        smallFont = new BitmapFont(Gdx.files.internal("fonts/small.fnt"),
+            Gdx.files.internal("fonts/small.png"), false);
 
         world = new World(new Vector2(0,-9.81f), true);
         debugRenderer = new Box2DDebugRenderer();
@@ -97,6 +106,9 @@ public class GameRoom implements Screen {
         initalizeSprites();
         orbCollected = false;
         timeCollected = -1;
+        score = 0;
+        scoreTimer = 0;
+        taggedTime = 0;
 
         clicked = false;
 
@@ -113,6 +125,7 @@ public class GameRoom implements Screen {
             peer_list.add(p);
         }
         sendPositionData = false;
+        targetTime = 0;
 
         new Thread(new Runnable() {
             @Override
@@ -127,7 +140,8 @@ public class GameRoom implements Screen {
                 sendPositionData = true;
 
                 if(isHost) {
-                    sendAllMessage("messagetype:targetTime," + (System.currentTimeMillis() + 180000));
+                    targetTime = System.currentTimeMillis() + 180000;
+                    sendAllMessage("messagetype:targetTime," + targetTime);
                 }
             }
          }).start();
@@ -151,6 +165,23 @@ public class GameRoom implements Screen {
         String name = getItPlayerName();
         hudFont.draw(game.batch, "it: " + name, -700, 325);
 
+        //draw scoreboard
+        drawScoreboard(game.batch);
+
+        if(targetTime != 0) {
+            int seconds = (int)(targetTime - System.currentTimeMillis()) / 1000;
+            int min = (seconds % 3600) / 60;
+            int sec = seconds % 60;
+            String secString = sec + "";
+            if(sec < 10) {
+                secString = "0" + sec;
+            }
+            hudFont.draw(game.batch, min + ":" + secString, -75, 375);
+        }
+        else {
+            hudFont.draw(game.batch, "Countdown: 3:00", -75, 375);
+        }
+
         for(Peer p:peer_list) {
             if(p.playerInfo != null){
                 float xp = p.playerInfo.getBody().getPosition().x;
@@ -171,7 +202,6 @@ public class GameRoom implements Screen {
 		game.batch.setProjectionMatrix(camera.combined);
 		game.batch.begin();
         drawSprites(game.batch);
-        orbSprite.draw(game.batch);
 
 		game.batch.end();
 
@@ -180,16 +210,21 @@ public class GameRoom implements Screen {
         player.step();
 
         //game checks
-        if(name.equals("")) {
+        if(name.equals("") && !orbCollected) {
             if(orbSprite.getBoundingRectangle().overlaps(playerSprite.getBoundingRectangle())) {
                 //since this is local, send a message to everyone stating the exact time you hit it
-                long time = System.currentTimeMillis();
+                timeCollected = System.currentTimeMillis();
                 orbCollected = true;
+                isIt = true;
+                playerSprite.setTexture(new Texture(Gdx.files.internal("itPlayer.png")));
 
-                sendAllMessage("messagetype:orbCollected," + time + "," + player_id);
+                sendAllMessage("messagetype:orbCollected," + timeCollected + "," + player_id);
+                scoreTimer = System.currentTimeMillis();
             }
         }
-        
+        incrementScore();
+        checkIfTagged();
+        checkIfDone();
 
         //networking
         if(sendPositionData && !playerBody.getLinearVelocity().isZero())
@@ -256,8 +291,47 @@ public class GameRoom implements Screen {
             }
             else if(type.equals("orbCollected")) {
                 String who = lines[2];
-                
+                long time = Long.parseLong(lines[1]);
+                scoreTimer = System.currentTimeMillis();
+                /*
+                if(orbCollected) {
+                    if(timeCollected < time) {
+                        isIt = true;
+                        sendAllMessage("messagetype:isIt," + player_id);
+                    }
+                }*/
+                orbCollected = true;
+                for(Peer p:peer_list) {
+                    if(p.peer_id.equals(who)) {
+                        p.isIt = true;
+                        p.playerInfo.setItSprite(true);
+                    }
+                }
 
+            }
+            else if(type.equals("targetTime")) {
+                targetTime = Long.parseLong(lines[1]);
+            }
+            else if(type.equals("tagged")) {
+                String newIt = lines[1];
+                String oldIt = lines[2];
+                long taggedTime = Long.parseLong(lines[3]);
+
+                for(Peer p:peer_list) {
+                    if(p.peer_id.equals(newIt)) {
+                        p.isIt = true;
+                        p.playerInfo.setItSprite(true);
+                    }
+                    if(p.peer_id.equals(oldIt)) {
+                        p.isIt = false;
+                        p.playerInfo.setItSprite(false);
+                        p.stolenTime = taggedTime;
+                    }
+                }
+                if(newIt.equals(player_id)) {
+                    isIt = true;
+                    playerSprite.setTexture(new Texture(Gdx.files.internal("itPlayer.png")));
+                }
             }
             
 
@@ -277,6 +351,8 @@ public class GameRoom implements Screen {
                 }
             }
         }
+        if(isIt)
+            retVal = username;
         return retVal;
     }
 
@@ -288,6 +364,94 @@ public class GameRoom implements Screen {
                 body.setTransform(x, y, 0);
             }
         }
+    }
+
+    private void incrementScore() {
+        if((System.currentTimeMillis() - scoreTimer) >= 1000) {
+            if(orbCollected) {
+                scoreTimer = System.currentTimeMillis();
+                if(isIt) {
+                    score += 1;
+                }
+                else {
+                    for(Peer p:peer_list) {
+                        if(p.isIt) {
+                            p.score += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    private void drawScoreboard(SpriteBatch batch) {
+
+        class Score {
+            int score;
+            String name;
+
+            public Score(int s, String n) {
+                score = s;
+                name = n;
+            }
+        }
+        ArrayList<Score> list = new ArrayList<Score>();
+        Comparator<Score> cmp = new Comparator<Score>() {
+            @Override
+            public int compare(Score s1, Score s2) {
+                return Integer.compare(s2.score, s1.score);
+            }
+        };
+        for(Peer p:peer_list) {
+            list.add(new Score(p.score,p.name));
+        }
+        list.add(new Score(score,username));
+        Collections.sort(list, cmp);
+
+        smallFont.draw(batch, "Scoreboard:", -700, 275);
+        int yIndex = 250;
+        for(Score s:list) {
+            smallFont.draw(batch, s.name + ": " + s.score, -700, yIndex);
+            yIndex -= 25;
+        }
+    }
+
+    private void checkIfTagged() {
+        if(isIt) {
+            for(Peer p:peer_list) {
+                if(playerSprite.getBoundingRectangle().overlaps(p.playerInfo.sprite.getBoundingRectangle())) {
+                    if(System.currentTimeMillis() - p.stolenTime > 3000) {
+                        taggedTime = System.currentTimeMillis();
+                        isIt = false;
+                        p.isIt = true;
+                        p.playerInfo.setItSprite(true);
+                        playerSprite.setTexture(new Texture(Gdx.files.internal("player.png")));
+
+                        sendAllMessage("messagetype:tagged," + p.peer_id + "," + player_id + "," + taggedTime);
+                    }
+                }
+            }
+        }
+    }
+
+    private void checkIfDone() {
+
+        if(targetTime != 0 && System.currentTimeMillis() >= targetTime) {
+
+            String winner = username;
+            int topScore = score;
+
+            for(Peer p:peer_list) {
+                if(p.score > topScore) {
+                    topScore = p.score;
+                    winner = p.name;
+                }
+            }
+            game.setScreen(new EndScreen(game,winner));
+
+        }
+
     }
 
     @Override
