@@ -4,10 +4,12 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.mygdx.game.Lobby;
 import com.mygdx.game.OtherPlayer;
 
 
@@ -28,6 +30,8 @@ public class Peer {
     public boolean isIt;
     public int score;
     public long stolenTime;
+    public long itTime;
+    public ArrayList<Integer> scores;
 
     public Peer(String ip, String peer_id, int port, String serverId, String name) {
         this.ip = ip;
@@ -54,6 +58,8 @@ public class Peer {
         isIt = false;
         score = 0;
         stolenTime = 0;
+        itTime = 0;
+        scores = new ArrayList<Integer>();
 
     }
 
@@ -64,7 +70,7 @@ public class Peer {
             out.flush();
         }
         catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
         
     }
@@ -76,6 +82,9 @@ public class Peer {
 
     public void close() {
         try {
+            if(playerInfo != null) {
+                playerInfo.dispose();
+            }
             socket.close();
         }
         catch(Exception e) {

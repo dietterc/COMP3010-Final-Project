@@ -11,6 +11,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.MapLayer;
@@ -64,6 +65,10 @@ public class GameRoom implements Screen {
     int score;
     long scoreTimer;
     long taggedTime;
+    //host
+    int scores_gotten;
+    ArrayList<String> scoresToMode;
+    ArrayList<Integer> myScores;
 
     //sprites
     Sprite orbSprite;
@@ -109,6 +114,10 @@ public class GameRoom implements Screen {
         score = 0;
         scoreTimer = 0;
         taggedTime = 0;
+        scores_gotten = 0;
+        scoresToMode = new ArrayList<String>();
+        myScores = new ArrayList<Integer>();
+        isIt = false;
 
         clicked = false;
 
@@ -127,6 +136,7 @@ public class GameRoom implements Screen {
         sendPositionData = false;
         targetTime = 0;
 
+        //do this stuff after a short delay
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -143,6 +153,7 @@ public class GameRoom implements Screen {
                     targetTime = System.currentTimeMillis() + 180000;
                     sendAllMessage("messagetype:targetTime," + targetTime);
                 }
+
             }
          }).start();
     }
@@ -150,7 +161,6 @@ public class GameRoom implements Screen {
     @Override
 	public void render(float delta) {
         ScreenUtils.clear(0.5f, 0.5f, 0.5f, 1);
-
         
 		world.step(1/60f, 6, 2);
 
@@ -190,8 +200,14 @@ public class GameRoom implements Screen {
                 Vector3 vec = new Vector3(xp, yp, 0);
                 camera.project(vec);
                 nameFont.draw(game.batch, p.name, vec.x-735, vec.y-355);
-            }     
+            }    
+            if(p.isHost) {
+                smallFont.draw(game.batch, "Host: " + p.name, 0, 375);
+            } 
         }
+        if(isHost) {
+            smallFont.draw(game.batch, "Host: " + username, 0, 375);
+        } 
 
 		game.batch.end();
 
@@ -202,7 +218,6 @@ public class GameRoom implements Screen {
 		game.batch.setProjectionMatrix(camera.combined);
 		game.batch.begin();
         drawSprites(game.batch);
-
 		game.batch.end();
 
         //physics
@@ -218,7 +233,7 @@ public class GameRoom implements Screen {
                 isIt = true;
                 playerSprite.setTexture(new Texture(Gdx.files.internal("itPlayer.png")));
 
-                sendAllMessage("messagetype:orbCollected," + timeCollected + "," + player_id);
+                sendAllMessage("messagetype:orbCollected," + player_id);
                 scoreTimer = System.currentTimeMillis();
             }
         }
@@ -230,10 +245,6 @@ public class GameRoom implements Screen {
         if(sendPositionData && !playerBody.getLinearVelocity().isZero())
             sendAllMessage("messagetype:position," + player.getBody().getPosition().x + "," + player.getBody().getPosition().y + "," + player_id);
 
-        if(Gdx.input.isKeyPressed(Input.Keys.P)) {
-            //otherPlayer.getBody().setTransform(new Vector2(otherPlayer.getBody().getPosition().x + .02f,-37.5f), 0);
-            sendAllMessage("messagetype:text," + "HEY");
-        }
 
         for(int i=0;i<peer_list.size() + 1;i++) {
             if(!messageQueue_gameroom.isEmpty()) {
@@ -290,16 +301,9 @@ public class GameRoom implements Screen {
                 moveOtherPlayer(Float.parseFloat(lines[1]),Float.parseFloat(lines[2]),lines[3]);
             }
             else if(type.equals("orbCollected")) {
-                String who = lines[2];
-                long time = Long.parseLong(lines[1]);
+                String who = lines[1];
                 scoreTimer = System.currentTimeMillis();
-                /*
-                if(orbCollected) {
-                    if(timeCollected < time) {
-                        isIt = true;
-                        sendAllMessage("messagetype:isIt," + player_id);
-                    }
-                }*/
+
                 orbCollected = true;
                 for(Peer p:peer_list) {
                     if(p.peer_id.equals(who)) {
@@ -320,6 +324,7 @@ public class GameRoom implements Screen {
                 for(Peer p:peer_list) {
                     if(p.peer_id.equals(newIt)) {
                         p.isIt = true;
+                        p.itTime = System.currentTimeMillis();
                         p.playerInfo.setItSprite(true);
                     }
                     if(p.peer_id.equals(oldIt)) {
@@ -332,7 +337,57 @@ public class GameRoom implements Screen {
                     isIt = true;
                     playerSprite.setTexture(new Texture(Gdx.files.internal("itPlayer.png")));
                 }
+
+                String[] scores = new String[peer_list.size()+1];
+                Peer host = null;
+                for(int i=0;i<peer_list.size();i++) {
+                    if(peer_list.get(i).isHost) {
+                        host = peer_list.get(i);
+                    }
+                    scores[i] = peer_list.get(i).peer_id + ";" + peer_list.get(i).score;
+                }
+                scores[peer_list.size()] = player_id + ";" + score;
+                if(host != null)
+                    host.sendMessage("messagetype:scores," + String.join("/", scores));
             }
+            else if(type.equals("scores")) {
+                scores_gotten += 1;
+                scoresToMode.add(lines[1]);
+                if(scores_gotten == peer_list.size()) {
+                    modeScores();
+                }
+
+            }
+            else if(type.equals("newScore")) {
+                String who = lines[1];
+                int score = Integer.parseInt(lines[2]);
+
+                for(Peer p:peer_list) {
+                    if(p.peer_id.equals(who)) {
+                        p.score = score;
+                    }
+                }
+                if(player_id.equals(who)) {
+                    this.score = score;
+                }
+            }
+            else if(type.equals("setHost")) {
+                String who = lines[1];
+
+                if(who.equals(player_id)) {
+                    isHost = true;
+                }
+                else {
+                    for(Peer p : peer_list) {
+                        if(p.peer_id.equals(who)) {
+                            p.isHost = true;  
+                        }
+                    }
+                }
+            }
+            else if(type.equals("respawnOrb")) {
+                orbCollected = false;
+            } 
             
 
         }
@@ -425,10 +480,23 @@ public class GameRoom implements Screen {
                         taggedTime = System.currentTimeMillis();
                         isIt = false;
                         p.isIt = true;
+                        p.itTime = System.currentTimeMillis();
                         p.playerInfo.setItSprite(true);
                         playerSprite.setTexture(new Texture(Gdx.files.internal("player.png")));
 
-                        sendAllMessage("messagetype:tagged," + p.peer_id + "," + player_id + "," + taggedTime);
+                        sendAllMessage("messagetype:tagged," + p.peer_id + "," + player_id + "," + taggedTime + "," + score);
+
+                        String[] scores = new String[peer_list.size()+1];
+                        Peer host = null;
+                        for(int i=0;i<peer_list.size();i++) {
+                            if(peer_list.get(i).isHost) {
+                                host = peer_list.get(i);
+                            }
+                            scores[i] = peer_list.get(i).peer_id + ";" + peer_list.get(i).score;
+                        }
+                        scores[peer_list.size()] = player_id + ";" + score;
+                        if(host != null) 
+                            host.sendMessage("messagetype:scores," + String.join("/", scores));
                     }
                 }
             }
@@ -452,6 +520,72 @@ public class GameRoom implements Screen {
 
         }
 
+    }
+
+    private void modeScores() {
+        //calculate the mode of all the scores Ive gotten from peers
+        for(String s:scoresToMode) {
+            String[] players = s.split("/");
+            for(int i=0;i<players.length;i++) {
+                String[] split = players[i].split(";");
+                for(Peer p:peer_list) {
+                    if(p.peer_id.equals(split[0])) {
+                        p.scores.add(Integer.parseInt(split[1]));
+                    }
+                }
+                if(player_id.equals(split[0])) {
+                    myScores.add(Integer.parseInt(split[1]));
+                }
+            }
+        }
+        
+        //get the mode of the scores everyone had for each peer
+        for(Peer p:peer_list) {
+            //add their own score to it too
+            p.scores.add(p.score);
+
+            int max = p.score;
+            int maxCount = 0;
+
+            for(int i1:p.scores) {
+                System.out.println("s: " + i1);
+                int count = 0;
+                for(int i2:p.scores) {
+                    if(i1 == i2) {
+                        count++;
+                    }
+                }
+                if(count > maxCount) {
+                    maxCount = count;
+                    max = i1;
+                }
+            }
+            p.score = max;
+            sendAllMessage("messagetype:newScore," + p.peer_id + "," + p.score);
+            p.scores.clear();
+        }
+        //do my score too
+        int max = score;
+        int maxCount = 0;
+
+        for(int i1:myScores) {
+            System.out.println("s: " + i1);
+            int count = 0;
+            for(int i2:myScores) {
+                if(i1 == i2) {
+                    count++;
+                }
+            }
+            if(count > maxCount) {
+                maxCount = count;
+                max = i1;
+            }
+        }
+        score = max;
+        sendAllMessage("messagetype:newScore," + player_id + "," + score);
+        myScores.clear();
+        scoresToMode.clear();
+        scores_gotten = 0;
     }
 
     @Override
@@ -481,7 +615,22 @@ public class GameRoom implements Screen {
 
     @Override
 	public void dispose() {
-	
+        
+        try { 
+            for(Peer p: peer_list) {
+                //if I was the host, set the first peer I connected to as the new host
+                if(isHost) 
+                    p.sendMessage("messagetype:setHost," + peer_list.get(0).peer_id);
+
+                if(isIt)
+                    p.sendMessage("messagetype:respawnOrb,");
+                p.close();
+            }
+        }
+        catch(Exception e) {
+
+        }
+
 	}
 
     private void initalizeSprites() {

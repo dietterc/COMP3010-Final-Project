@@ -50,6 +50,9 @@ public class Lobby implements Screen {
 
     private JmDNS jmdns;
     private ServiceInfo serviceInfo;
+    private boolean do_mDNS = true;
+    private String directIP;
+    private int directPort;
 
     private ServerSocket serverSocket;
     private Socket clientSocket;
@@ -66,13 +69,13 @@ public class Lobby implements Screen {
     public static double startingX;
     public static double startingY;
 
-    private GameRoom gm = null;
+    private GameRoom gameRoom = null;
 
     //startup
     long countdownTarget;
     boolean countingDown;
 
-    public Lobby(final ProjectMain game, String given_username, String given_player_id) {
+    public Lobby(final ProjectMain game, String given_username, String given_player_id, boolean do_mDNS, String d_ip, int d_port) {
         this.game = game;
         hudCamera = new OrthographicCamera(1440,810);
         hudFont = new BitmapFont(Gdx.files.internal("fonts/font.fnt"),
@@ -89,12 +92,18 @@ public class Lobby implements Screen {
         ready = false;
         startTime = System.currentTimeMillis();
         isHost = false;
+        directIP = d_ip;
+        directPort = d_port;
 
         messageQueue = new ConcurrentLinkedQueue<String>();
         inLobby = true;
 
         tcpSetup();
-        mdnsSetup();
+        if(do_mDNS)
+            mdnsSetup();
+        else 
+            directConnect();
+    
 
         countdownTarget = 0;
         countingDown = false;
@@ -162,14 +171,21 @@ public class Lobby implements Screen {
                 hudFont.draw(game.batch, "Starting game...", -100, -200);
                 //move to game room here
                 inLobby = false;
-                game.setScreen(new GameRoom(game));
+                gameRoom = new GameRoom(game);
+                game.setScreen(gameRoom);
             }
         }
 
         //test info
         smallFont.draw(game.batch, "debug info", -50, 375);
-        smallFont.draw(game.batch, "X: " + startingX, -50, 350);
-        smallFont.draw(game.batch, "Y: " + startingY, -50, 325);
+        String ip = "";
+        try {
+            ip = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        smallFont.draw(game.batch, "IP: " + ip, -50, 350);
+        smallFont.draw(game.batch, "Port: " + activePort, -50, 325);
 
 		game.batch.end();
 
@@ -197,6 +213,17 @@ public class Lobby implements Screen {
             isHost = false;
         }
 
+        //check to see if there are any invalid peers
+        ArrayList<Peer> invalidPeers = new ArrayList<Peer>();
+        for(Peer p:peer_list) {
+            if(p.peer_id.equals("nil")) {
+                p.close();
+                invalidPeers.add(p);
+            }
+        }
+        for(Peer p: invalidPeers) {
+            peer_list.remove(p);
+        }
     }
 
     void sendAllMessage(String message) {
@@ -498,6 +525,17 @@ public class Lobby implements Screen {
 
 	}
 
+    private void directConnect() {
+
+        //connect to peer with invalid info
+        //This just tells the peer I am here, so then the flooding protocol will kick in
+        // and then connect everyone. This invalid peer will be deleted automatically
+        PeerInfo newPeer = new PeerInfo(directIP,directPort);
+        System.out.println("Attempting to connect to: " + directIP + ":" + directPort);
+        connectToPeer(newPeer);
+
+    }
+
     //Once a peer is found with mDNS, try to establish a tcp connection
     private void connectToPeer(PeerInfo peer) {
 
@@ -569,11 +607,16 @@ public class Lobby implements Screen {
     @Override
 	public void dispose() {
         try { 
-            for(Peer p: peer_list) {
-                //if I was the host, set the first peer I connected to as the new host
-                if(isHost)
-                    p.sendMessage("messagetype:setHost," + peer_list.get(0).peer_id);
-                p.close();
+            if(gameRoom == null) {
+                for(Peer p: peer_list) {
+                    //if I was the host, set the first peer I connected to as the new host
+                    if(isHost)
+                        p.sendMessage("messagetype:setHost," + peer_list.get(0).peer_id);
+                    p.close();
+                }
+            }
+            else {
+                gameRoom.dispose();
             }
             serverSocket.close();
         }

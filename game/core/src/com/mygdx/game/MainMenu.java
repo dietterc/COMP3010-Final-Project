@@ -17,6 +17,9 @@ public class MainMenu implements Screen {
     private OrthographicCamera hudCamera;
     private BitmapFont hudFont;
     private String username;
+    private String ip;
+    private int port;
+    private boolean normal;
 
     private Lobby lobby;
 
@@ -29,7 +32,7 @@ public class MainMenu implements Screen {
         hudFont.setColor(0, 0, 0, 1);
 
         username = "";
-        
+        normal = true;
     }
 
     @Override
@@ -51,10 +54,17 @@ public class MainMenu implements Screen {
             getUsername();
         }
 
+        if(Gdx.input.isKeyJustPressed(Keys.L)) {
+            getUsernameAndIp();
+        }
+
         if(!username.equals("")) {
             String id = UUID.randomUUID().toString();
             //game.setScreen(new GameRoom(game));
-            lobby = new Lobby(game,username,id);
+            if(normal)
+                lobby = new Lobby(game,username,id,true,"",0);
+            else
+                lobby = new Lobby(game,username,id,false,ip,port);
             game.setScreen(lobby);
         }
 
@@ -73,6 +83,31 @@ public class MainMenu implements Screen {
             }
         }
         Gdx.input.getTextInput(new TextListener(),"Enter a Username","","username");
+    }
+
+    private void getUsernameAndIp() {
+        class TextListener implements Input.TextInputListener {
+            @Override
+            public void input(String text) {
+                String[] split = text.split(",");
+                try {
+                    username = split[0];
+                    ip = split[1];
+                    port = Integer.parseInt(split[2]);
+                    normal = false;
+                }
+                catch(Exception e) {
+                    username = "";
+                }
+                
+            }
+
+            @Override
+            public void canceled() {
+                username = "";
+            }
+        }
+        Gdx.input.getTextInput(new TextListener(),"Enter a Username, ip, and port separated by commas","","username,192.168...,25565");
     }
 
 

@@ -27,4 +27,11 @@ public class PeerInfo {
         this.username = username;
     }
 
+    public PeerInfo(String ip, int port ) {
+        this.ip = ip;
+        this.peer_id = "nil";
+        this.port = port;
+        this.username = "";
+    }
+
 }

@@ -49,29 +49,31 @@ public class ClientHandlerThread extends Thread {
             socket.close();
         } catch (Exception ex) {
             //System.out.println("Server exception: " + ex.getMessage());
-            ex.printStackTrace();
-            Peer me = null;
+            //ex.printStackTrace();
+            Peer disconnectedPeer = null;
             if(Lobby.inLobby) {
                 for(Peer p : Lobby.peer_list) {
                     if(p.peer_id.equals(myId)) {
-                        me = p;
+                        disconnectedPeer = p;
                     }
                 }
-                if(me != null) {
-                    Lobby.peer_list.remove(me);
-                    System.out.println("Removing " + me.peer_id + " from peer list.");
+                if(disconnectedPeer != null) {
+                    Lobby.peer_list.remove(disconnectedPeer);
+                    System.out.println("Removing " + disconnectedPeer.peer_id + " from peer list.");
 
                 }
             }
             else {
                 for(Peer p : GameRoom.peer_list) {
                     if(p.peer_id.equals(myId)) {
-                        me = p;
+                        disconnectedPeer = p;
                     }
                 }
-                if(me != null) {
-                    GameRoom.peer_list.remove(me);
-                    System.out.println("Removing " + me.peer_id + " from peer list.");
+                if(disconnectedPeer != null) {
+                    GameRoom.peer_list.remove(disconnectedPeer);
+                    System.out.println("Removing " + disconnectedPeer.peer_id + " from peer list.");
+
+                    disconnectedPeer.close();
                 }
             }
         } 

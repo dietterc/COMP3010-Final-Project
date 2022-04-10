@@ -15,6 +15,7 @@ public class OtherPlayer {
     private Body physicsBody;
     private CircleShape circle;
     public Sprite sprite;
+    private World world;
 
     public OtherPlayer(World world, float startX, float startY) {
         
@@ -24,6 +25,8 @@ public class OtherPlayer {
         sprite.setPosition(physicsBody.getPosition().x, physicsBody.getPosition().y);
         sprite.setBounds(0,0,.80f,.80f);
         sprite.setOriginCenter();
+
+        this.world = world;
     }
 
     public void step(SpriteBatch batch) {
@@ -64,6 +67,10 @@ public class OtherPlayer {
         fixtureDef.friction = 0.1f;
         fixtureDef.restitution = 0.0f;
         physicsBody.createFixture(fixtureDef);
+    }
+
+    public void dispose() {
+        world.destroyBody(physicsBody);
     }
     
 }
