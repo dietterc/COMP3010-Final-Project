@@ -54,6 +54,14 @@ public class Player {
         if(!useFuel && currentFuel < MAX_FUEL) {
             currentFuel += 2;
         }
+
+        if(currentFuel > MAX_FUEL) {
+            currentFuel = MAX_FUEL;
+        }
+
+        if(currentFuel < 0) {
+            currentFuel = 0;
+        }
         
     }
 

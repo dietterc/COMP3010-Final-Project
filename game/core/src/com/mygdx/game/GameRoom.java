@@ -8,12 +8,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapLayers;
 import com.badlogic.gdx.maps.MapObject;
@@ -30,7 +33,9 @@ import com.badlogic.gdx.physics.box2d.joints.RopeJoint;
 import com.badlogic.gdx.physics.box2d.joints.RopeJointDef;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.mygdx.game.utils.Peer;
+
+//my utils
+import com.mygdx.game.utils.*;
 
 public class GameRoom implements Screen {
     
@@ -52,6 +57,8 @@ public class GameRoom implements Screen {
     RopeJoint RJ;
     private Array<Wall> grappleWalls;
     private float ropeLen;
+    private Vector3 ropeTarget;
+    private ArrayList<Rope> otherRopes;
 
     BitmapFont hudFont;
     BitmapFont nameFont;
@@ -65,6 +72,7 @@ public class GameRoom implements Screen {
     int score;
     long scoreTimer;
     long taggedTime;
+
     //host
     int scores_gotten;
     ArrayList<String> scoresToMode;
@@ -104,6 +112,8 @@ public class GameRoom implements Screen {
         //otherPlayer = new OtherPlayer(world, 0f,-37.5f);
 
         rope_init();
+        ropeTarget = new Vector3();
+        otherRopes = new ArrayList<Rope>();
 
         grappleWalls = new Array<Wall>();
         loadMap();
@@ -164,6 +174,16 @@ public class GameRoom implements Screen {
         
 		world.step(1/60f, 6, 2);
 
+        //player/world drawing
+        updateCameraPos();
+		camera.update();
+		game.batch.setProjectionMatrix(camera.combined);
+		game.batch.begin();
+        drawSprites(game.batch);
+		game.batch.end();
+
+        drawRopes();
+
         //HUD
         hudCamera.update();
         game.batch.setProjectionMatrix(hudCamera.combined);
@@ -208,16 +228,8 @@ public class GameRoom implements Screen {
         if(isHost) {
             smallFont.draw(game.batch, "Host: " + username, 0, 375);
         } 
+        smallFont.draw(game.batch, "x: " + playerBody.getPosition().x + "\ny: " + playerBody.getPosition().y, 0, 350);
 
-		game.batch.end();
-
-
-        //player/world drawing
-        updateCameraPos();
-		camera.update();
-		game.batch.setProjectionMatrix(camera.combined);
-		game.batch.begin();
-        drawSprites(game.batch);
 		game.batch.end();
 
         //physics
@@ -267,7 +279,7 @@ public class GameRoom implements Screen {
         }
 
 
-        debugRenderer.render(world, camera.combined);
+        //debugRenderer.render(world, camera.combined);
     }
 
     private void sendAllMessage(String message) {
@@ -388,6 +400,37 @@ public class GameRoom implements Screen {
             else if(type.equals("respawnOrb")) {
                 orbCollected = false;
             } 
+            //sendAllMessage("messagetype:drawRope," + player_id + "," + ropeTarget.x + "," + ropeTarget.y);
+            else if(type.equals("drawRope")) {
+                String who = lines[1];
+                float x = Float.parseFloat(lines[2]);
+                float y = Float.parseFloat(lines[3]);
+
+                for(Peer p:peer_list) {
+                    if(p.peer_id.equals(who)) {
+                        otherRopes.add(new Rope(x,y,p.playerInfo));
+                    }
+                }
+
+            }
+            else if(type.equals("destroyRope")) {
+                String who = lines[1];
+
+                Rope target = null;
+                for(Peer p:peer_list) {
+                    if(p.peer_id.equals(who)) {
+                        for(Rope r:otherRopes) {
+                            if(r.player.equals(p.playerInfo)) {
+                                target = r;
+                            }
+                        }
+                    }
+                }
+                if(target != null) {
+                    otherRopes.remove(target);
+                }
+
+            }
             
 
         }
@@ -636,7 +679,7 @@ public class GameRoom implements Screen {
     private void initalizeSprites() {
 
         orbSprite = new Sprite(new Texture(Gdx.files.internal("orb.png")));
-        orbSprite.setPosition(0.25f, -16.00f);
+        orbSprite.setPosition(0f, 0f);
         orbSprite.setBounds(0,0,1f,1f);
         //orbSprite.setOriginCenter();
 
@@ -648,8 +691,16 @@ public class GameRoom implements Screen {
     }
 
     private void drawSprites(SpriteBatch batch) {
-        if(!orbCollected)
+        if(!orbCollected) {
+            orbSprite.setPosition(0f, 0f);;
             orbSprite.draw(batch);
+        }
+        
+        //draw wall sprites
+        for(Wall w:grappleWalls) {
+            w.wSprite.setPosition(w.getBody().getPosition().x-.25f, w.getBody().getPosition().y-.25f);
+            w.wSprite.draw(batch);
+        } 
 
         playerSprite.setPosition(playerBody.getPosition().x-.4f, playerBody.getPosition().y-.4f);
         playerSprite.draw(batch);
@@ -660,7 +711,9 @@ public class GameRoom implements Screen {
                 p.playerInfo.step(batch);
             }
         }
+
         
+
     }
 
     //set the camera to smoothly follow the player
@@ -715,26 +768,17 @@ public class GameRoom implements Screen {
 
         //rope methods
         if(Gdx.input.isKeyPressed(Input.Keys.Q)) {
-            if(ropeLen < 5f)
+            if(ropeLen < 5f && clicked)
                 ropeLen += .1f;
         }
     
         if(Gdx.input.isKeyPressed(Input.Keys.E)) {
-            if(ropeLen > 0f) {
-                Vector3 mousePos = new Vector3(Gdx.input.getX(),Gdx.input.getY(),0);
-                camera.unproject(mousePos);
+            if(ropeLen > 0f && clicked) {
 
                 ropeLen -= .05f;
                 int pullForce = 5;
-
-                /* FIX LATER
-                Vector2 velocity = playerBody.getLinearVelocity();
-                float speed = velocity.nor().len();
-                if(speed > 3) {
-                    playerBody.setLinearVelocity(velocity.x * 3,velocity.y * 3);
-                }*/
             
-                Vector2 direction = new Vector2((mousePos.x - playerBody.getPosition().x)*pullForce, (mousePos.y - playerBody.getPosition().y)*pullForce);
+                Vector2 direction = new Vector2((ropeTarget.x - playerBody.getPosition().x)*pullForce, (ropeTarget.y - playerBody.getPosition().y)*pullForce);
                 playerBody.applyForceToCenter(direction, true);
 
             }
@@ -746,19 +790,22 @@ public class GameRoom implements Screen {
         }
 
         if(Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
-            Vector3 mousePos = new Vector3(Gdx.input.getX(),Gdx.input.getY(),0);
-            camera.unproject(mousePos);
+            ropeTarget = new Vector3(Gdx.input.getX(),Gdx.input.getY(),0);
+            camera.unproject(ropeTarget);
 
-            clicked = true;
             Body clickedBody = null;
             //find out what body was clicked
             for(Wall wall:grappleWalls) {
-                if(mousePos.dst(wall.getBody().getPosition().x,wall.getBody().getPosition().y,0) < .35f) {
+                if(ropeTarget.dst(wall.getBody().getPosition().x,wall.getBody().getPosition().y,0) < .35f) {
                     clickedBody = wall.getBody();
                 }
             }
             
             if(clickedBody != null) {
+                clicked = true;
+                //send draw rope message
+                sendAllMessage("messagetype:drawRope," + player_id + "," + ropeTarget.x + "," + ropeTarget.y);
+
                 if(RJ != null)
                     world.destroyJoint(RJ);
 
@@ -779,6 +826,9 @@ public class GameRoom implements Screen {
 
         if(!Gdx.input.isButtonPressed(Input.Buttons.LEFT) && clicked) {
             clicked = false;
+            
+            //send destroy rope message
+            sendAllMessage("messagetype:destroyRope," + player_id);
 
             if(RJ != null) {
                 world.destroyJoint(RJ);
@@ -787,6 +837,30 @@ public class GameRoom implements Screen {
 
         }
 
+        if(clicked) {
+            //draw rope 
+            ShapeRenderer shape = new ShapeRenderer();
+            shape.setColor(Color.DARK_GRAY); 
+            shape.setProjectionMatrix(camera.combined);
+        
+            shape.begin(ShapeType.Filled);
+            shape.rectLine(player.getBody().getPosition().x, player.getBody().getPosition().y,ropeTarget.x, ropeTarget.y, .05f);
+            shape.end();
+        }
+
+
+    }
+
+    private void drawRopes() {
+        ShapeRenderer shape = new ShapeRenderer();
+        shape.setColor(Color.DARK_GRAY); 
+        shape.setProjectionMatrix(camera.combined);
+        shape.begin(ShapeType.Filled);
+
+        for(Rope r:otherRopes) {
+            shape.rectLine(r.player.getBody().getPosition().x, r.player.getBody().getPosition().y,r.x, r.y, .05f);
+        }
+        shape.end();
 
     }
 
