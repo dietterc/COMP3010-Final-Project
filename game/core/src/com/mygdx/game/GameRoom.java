@@ -12,7 +12,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -229,6 +228,8 @@ public class GameRoom implements Screen {
             smallFont.draw(game.batch, "Host: " + username, 0, 375);
         } 
         smallFont.draw(game.batch, "x: " + playerBody.getPosition().x + "\ny: " + playerBody.getPosition().y, 0, 350);
+        smallFont.draw(game.batch, "CONTROLS\nboost in a direction with w,a,s,d\nclick on a wall to attach a rope\ne to retract the rope\nq to extend", 300, 375);
+
 
 		game.batch.end();
 
