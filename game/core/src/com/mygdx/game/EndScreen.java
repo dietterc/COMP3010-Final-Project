@@ -44,7 +44,9 @@ public class EndScreen implements Screen {
 
 		game.batch.end();
 
-
+        if(Gdx.input.isKeyPressed(Keys.ESCAPE)) {
+            Gdx.app.exit();
+        }
 
     }
 

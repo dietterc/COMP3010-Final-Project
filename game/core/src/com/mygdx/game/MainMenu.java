@@ -68,6 +68,9 @@ public class MainMenu implements Screen {
             game.setScreen(lobby);
         }
 
+        if(Gdx.input.isKeyPressed(Keys.ESCAPE)) {
+            Gdx.app.exit();
+        }
     }
 
     private void getUsername() {

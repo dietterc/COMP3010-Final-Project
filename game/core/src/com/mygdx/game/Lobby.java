@@ -224,6 +224,10 @@ public class Lobby implements Screen {
         for(Peer p: invalidPeers) {
             peer_list.remove(p);
         }
+
+        if(Gdx.input.isKeyPressed(Keys.ESCAPE)) {
+            Gdx.app.exit();
+        }
     }
 
     void sendAllMessage(String message) {

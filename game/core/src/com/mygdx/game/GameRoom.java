@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.Input.Buttons;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -15,6 +17,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g3d.decals.CameraGroupStrategy;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.maps.MapLayer;
@@ -94,6 +97,7 @@ public class GameRoom implements Screen {
     public GameRoom(final ProjectMain game) {
         this.game = game;
         camera = new OrthographicCamera(WIDTH,HEIGHT);
+
         hudCamera = new OrthographicCamera(1440,810);
         hudFont = new BitmapFont(Gdx.files.internal("fonts/font.fnt"),
             Gdx.files.internal("fonts/font.png"), false);
@@ -209,7 +213,7 @@ public class GameRoom implements Screen {
             hudFont.draw(game.batch, min + ":" + secString, -75, 375);
         }
         else {
-            hudFont.draw(game.batch, "Countdown: 3:00", -75, 375);
+            hudFont.draw(game.batch, "3:00", -75, 375);
         }
 
         for(Peer p:peer_list) {
@@ -222,13 +226,13 @@ public class GameRoom implements Screen {
                 nameFont.draw(game.batch, p.name, vec.x-735, vec.y-355);
             }    
             if(p.isHost) {
-                smallFont.draw(game.batch, "Host: " + p.name, 0, 375);
+                smallFont.draw(game.batch, "Host: " + p.name, 500, 375);
             } 
         }
         if(isHost) {
-            smallFont.draw(game.batch, "Host: " + username, 0, 375);
+            smallFont.draw(game.batch, "Host: " + username, 500, 375);
         } 
-        smallFont.draw(game.batch, "x: " + playerBody.getPosition().x + "\ny: " + playerBody.getPosition().y, 0, 350);
+        smallFont.draw(game.batch, "\nx: " + playerBody.getPosition().x + "\ny: " + playerBody.getPosition().y, 500, 375);
 
 		game.batch.end();
 
@@ -278,6 +282,9 @@ public class GameRoom implements Screen {
             }
         }
 
+        if(Gdx.input.isKeyPressed(Keys.ESCAPE)) {
+            Gdx.app.exit();
+        }
 
         //debugRenderer.render(world, camera.combined);
     }
