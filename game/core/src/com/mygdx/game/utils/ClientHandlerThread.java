@@ -61,6 +61,10 @@ public class ClientHandlerThread extends Thread {
                     Lobby.peer_list.remove(disconnectedPeer);
                     System.out.println("Removing " + disconnectedPeer.peer_id + " from peer list.");
 
+                    for(Peer p : Lobby.peer_list) {
+                        p.sendMessage("messagetype:chooseNewHost," + Lobby.player_id + "," + Lobby.startTime);
+                    }
+                    disconnectedPeer.close();
                 }
             }
             else {
@@ -73,6 +77,9 @@ public class ClientHandlerThread extends Thread {
                     GameRoom.peer_list.remove(disconnectedPeer);
                     System.out.println("Removing " + disconnectedPeer.peer_id + " from peer list.");
 
+                    for(Peer p : GameRoom.peer_list) {
+                        p.sendMessage("messagetype:chooseNewHost," + Lobby.player_id + "," + Lobby.startTime);
+                    } 
                     disconnectedPeer.close();
                 }
             }

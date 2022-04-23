@@ -92,6 +92,7 @@ public class GameRoom implements Screen {
     boolean allPeersHere;
     public static ConcurrentLinkedQueue<String> messageQueue_gameroom;
     public static ArrayList<Peer> peer_list;
+    public ArrayList<String> startTimes;
 
     public GameRoom(final ProjectMain game) {
         this.game = game;
@@ -136,6 +137,7 @@ public class GameRoom implements Screen {
 
         peer_list = new ArrayList<Peer>();
         messageQueue_gameroom = new ConcurrentLinkedQueue<String>();
+        startTimes = new ArrayList<String>();
 
         //networking
         username = Lobby.username;
@@ -173,121 +175,131 @@ public class GameRoom implements Screen {
 
     @Override
 	public void render(float delta) {
-        ScreenUtils.clear(0.5f, 0.5f, 0.5f, 1);
-        
-		world.step(1/60f, 6, 2);
+        //big ol try catch so the game exits nicely on crash
+        try {
+            ScreenUtils.clear(0.5f, 0.5f, 0.5f, 1);
+            
+            world.step(1/60f, 6, 2);
 
-        //player/world drawing
-        updateCameraPos();
-		camera.update();
-		game.batch.setProjectionMatrix(camera.combined);
-		game.batch.begin();
-        drawSprites(game.batch);
-		game.batch.end();
+            //player/world drawing
+            updateCameraPos();
+            camera.update();
+            game.batch.setProjectionMatrix(camera.combined);
+            game.batch.begin();
+            drawSprites(game.batch);
+            game.batch.end();
 
-        drawRopes();
+            drawRopes();
 
-        //HUD
-        hudCamera.update();
-        game.batch.setProjectionMatrix(hudCamera.combined);
-		game.batch.begin();
-        
-        String message = "Fuel: " + player.getFuel();
-        hudFont.draw(game.batch, message, -700, 375);
+            //HUD
+            hudCamera.update();
+            game.batch.setProjectionMatrix(hudCamera.combined);
+            game.batch.begin();
+            
+            String message = "Fuel: " + player.getFuel();
+            hudFont.draw(game.batch, message, -700, 375);
 
-        String name = getItPlayerName();
-        hudFont.draw(game.batch, "it: " + name, -700, 325);
+            String name = getItPlayerName();
+            hudFont.draw(game.batch, "it: " + name, -700, 325);
 
-        //draw scoreboard
-        drawScoreboard(game.batch);
+            //draw scoreboard
+            drawScoreboard(game.batch);
 
-        if(targetTime != 0) {
-            int seconds = (int)(targetTime - System.currentTimeMillis()) / 1000;
-            int min = (seconds % 3600) / 60;
-            int sec = seconds % 60;
-            String secString = sec + "";
-            if(sec < 10) {
-                secString = "0" + sec;
+            if(targetTime != 0) {
+                int seconds = (int)(targetTime - System.currentTimeMillis()) / 1000;
+                int min = (seconds % 3600) / 60;
+                int sec = seconds % 60;
+                String secString = sec + "";
+                if(sec < 10) {
+                    secString = "0" + sec;
+                }
+                hudFont.draw(game.batch, min + ":" + secString, -75, 375);
             }
-            hudFont.draw(game.batch, min + ":" + secString, -75, 375);
-        }
-        else {
-            hudFont.draw(game.batch, "3:00", -75, 375);
-        }
-
-        for(Peer p:peer_list) {
-            if(p.playerInfo != null){
-                float xp = p.playerInfo.getBody().getPosition().x;
-                float yp = p.playerInfo.getBody().getPosition().y;
-
-                Vector3 vec = new Vector3(xp, yp, 0);
-                camera.project(vec);
-                nameFont.draw(game.batch, p.name, vec.x-735, vec.y-355);
-            }    
-            if(p.isHost) {
-                smallFont.draw(game.batch, "Host: " + p.name, 500, 375);
-            } 
-        }
-        if(isHost) {
-            smallFont.draw(game.batch, "Host: " + username, 500, 375);
-        } 
-        smallFont.draw(game.batch, "x: " + playerBody.getPosition().x + "\ny: " + playerBody.getPosition().y, 0, 350);
-        smallFont.draw(game.batch, "CONTROLS\nboost in a direction with w,a,s,d\nclick on a wall to attach a rope\ne to retract the rope\nq to extend", 300, 375);
-
-
-		game.batch.end();
-
-        //physics
-        rope_step();
-        player.step();
-
-        //game checks
-        if(name.equals("") && !orbCollected) {
-            if(orbSprite.getBoundingRectangle().overlaps(playerSprite.getBoundingRectangle())) {
-                //since this is local, send a message to everyone stating the exact time you hit it
-                timeCollected = System.currentTimeMillis();
-                orbCollected = true;
-                isIt = true;
-                playerSprite.setTexture(new Texture(Gdx.files.internal("itPlayer.png")));
-
-                sendAllMessage("messagetype:orbCollected," + player_id);
-                scoreTimer = System.currentTimeMillis();
+            else {
+                hudFont.draw(game.batch, "3:00", -75, 375);
             }
-        }
-        incrementScore();
-        checkIfTagged();
-        checkIfDone();
 
-        //networking
-        if(sendPositionData && !playerBody.getLinearVelocity().isZero())
-            sendAllMessage("messagetype:position," + player.getBody().getPosition().x + "," + player.getBody().getPosition().y + "," + player_id);
-
-
-        for(int i=0;i<peer_list.size() + 1;i++) {
-            if(!messageQueue_gameroom.isEmpty()) {
-                //process n messages from the queue per step
-                //might need to adjust this
-                handleMessage(messageQueue_gameroom.remove());
-            }
-        }
-
-        //check if all peers made it to the game room.
-        if(!allPeersHere) {
-            int score = 0;
             for(Peer p:peer_list) {
-                if(p.playerInfo != null)
-                    score += 1;
-            }
-            if(score == peer_list.size()) {
-                allPeersHere = true;
-            }
-        }
+                if(p.playerInfo != null){
+                    float xp = p.playerInfo.getBody().getPosition().x;
+                    float yp = p.playerInfo.getBody().getPosition().y;
 
-        if(Gdx.input.isKeyPressed(Keys.ESCAPE)) {
+                    Vector3 vec = new Vector3(xp, yp, 0);
+                    camera.project(vec);
+                    nameFont.draw(game.batch, p.name, vec.x-735, vec.y-355);
+                }    
+                if(p.isHost) {
+                    smallFont.draw(game.batch, "Host: " + p.name, 50, 375);
+                } 
+            }
+            if(isHost) {
+                smallFont.draw(game.batch, "Host: " + username, 50, 375);
+            } 
+            smallFont.draw(game.batch, "x: " + playerBody.getPosition().x + "\ny: " + playerBody.getPosition().y, 50, 350);
+            smallFont.draw(game.batch, "CONTROLS\nboost in a direction with w,a,s,d\nclick on a wall to attach a rope\ne to retract the rope\nq to extend", 400, 375);
+
+
+            game.batch.end();
+
+            //physics
+            rope_step();
+            player.step();
+
+            //game checks
+            if(name.equals("") && !orbCollected) {
+                if(orbSprite.getBoundingRectangle().overlaps(playerSprite.getBoundingRectangle())) {
+                    //since this is local, send a message to everyone stating the exact time you hit it
+                    timeCollected = System.currentTimeMillis();
+                    orbCollected = true;
+                    isIt = true;
+                    playerSprite.setTexture(new Texture(Gdx.files.internal("itPlayer.png")));
+
+                    sendAllMessage("messagetype:orbCollected," + player_id);
+                    scoreTimer = System.currentTimeMillis();
+                }
+            }
+            incrementScore();
+            checkIfTagged();
+            checkIfDone();
+
+            //networking
+            if(sendPositionData && !playerBody.getLinearVelocity().isZero())
+                sendAllMessage("messagetype:position," + player.getBody().getPosition().x + "," + player.getBody().getPosition().y + "," + player_id);
+
+
+            for(int i=0;i<peer_list.size() + 1;i++) {
+                if(!messageQueue_gameroom.isEmpty()) {
+                    //process n messages from the queue per step
+                    //might need to adjust this
+                    handleMessage(messageQueue_gameroom.remove());
+                }
+            }
+
+            //check if all peers made it to the game room.
+            if(!allPeersHere) {
+                int score = 0;
+                for(Peer p:peer_list) {
+                    if(p.playerInfo != null)
+                        score += 1;
+                }
+                if(score == peer_list.size()) {
+                    allPeersHere = true;
+                }
+            }
+
+            if(!isHost && peer_list.size() == 0 && allPeersHere) {
+                isHost = true;
+            }
+
+            if(Gdx.input.isKeyPressed(Keys.ESCAPE)) {
+                Gdx.app.exit();
+            }
+
+            //debugRenderer.render(world, camera.combined);
+        }
+        catch(Exception e) {
             Gdx.app.exit();
         }
-
-        //debugRenderer.render(world, camera.combined);
     }
 
     private void sendAllMessage(String message) {
@@ -436,6 +448,32 @@ public class GameRoom implements Screen {
                 }
                 if(target != null) {
                     otherRopes.remove(target);
+                }
+            }
+            else if(type.equals("chooseNewHost")) {
+                startTimes.add(lines[1] + "," + lines[2]);
+
+                if(startTimes.size() >= peer_list.size()) {
+                    long min = Lobby.startTime;
+                    String newHost = null;
+
+                    for(String s:startTimes) {
+                        if(Long.parseLong(s.split(",")[1]) < min) {
+                            min = Long.parseLong(s.split(",")[1]);
+                            newHost = s.split(",")[0];
+                        }
+                    }
+                    if(newHost == null) {
+                        isHost = true;
+                    }
+                    else {
+                        for(Peer p:peer_list) {
+                            if(p.peer_id.equals(newHost)) {
+                                p.isHost = true;
+                            }
+                        }
+                    }
+                    startTimes.clear();
                 }
 
             }

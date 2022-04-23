@@ -53,6 +53,7 @@ public class Lobby implements Screen {
     private boolean do_mDNS = true;
     private String directIP;
     private int directPort;
+    public ArrayList<String> startTimes;
 
     private ServerSocket serverSocket;
     private Socket clientSocket;
@@ -60,7 +61,7 @@ public class Lobby implements Screen {
     public static ConcurrentLinkedQueue<String> messageQueue;
     public static boolean inLobby;
     private boolean ready;
-    private long startTime;
+    public static long startTime;
     public static boolean isHost;
 
     public static String username;
@@ -86,6 +87,7 @@ public class Lobby implements Screen {
             Gdx.files.internal("fonts/status.png"), false);
 
         peer_list = new ArrayList<Peer>();
+        startTimes = new ArrayList<String>();
 
         username = given_username;
         player_id = given_player_id;
@@ -339,6 +341,34 @@ public class Lobby implements Screen {
 
                 }
             }
+            else if(type.equals("chooseNewHost")) {
+                startTimes.add(lines[1] + "," + lines[2]);
+
+                //once we get a response from everyone, find out who was here first and make them the host
+                if(startTimes.size() >= peer_list.size()) {
+                    long min = Lobby.startTime;
+                    String newHost = null;
+
+                    for(String s:startTimes) {
+                        if(Long.parseLong(s.split(",")[1]) < min) {
+                            min = Long.parseLong(s.split(",")[1]);
+                            newHost = s.split(",")[0];
+                        }
+                    }
+                    if(newHost == null) {
+                        isHost = true;
+                    }
+                    else {
+                        for(Peer p:peer_list) {
+                            if(p.peer_id.equals(newHost)) {
+                                p.isHost = true;
+                            }
+                        }
+                    }
+                    startTimes.clear();
+                }
+
+            }
 
 
         }
@@ -350,13 +380,19 @@ public class Lobby implements Screen {
 
     //needs to be fixed so its not platform dependent
     private int calculateHash() {
-        //simple hash function (sum the chars)
+        //simple hash function (sum the times 'o' appears in the map)
+        //each tile on the map (a point that can be grappled) is listed as 
+        //<object id="60" gid="1" x="0" y="3200" width="32" height="32"/>
+        //so the number of 'o's is close to the number of tiles, and this number 
+        // should be the same for everyone.
+
         String file = Gdx.files.local("map.tmx").readString();
         int sum = 0;
         for(int i=0;i<file.length();i++) {
-            sum += 1;
+            if(file.charAt(i) == 'o')
+                sum += 1;
         }
-        return 5;
+        return sum;
     }
 
     private void checkReadyStatus() {
