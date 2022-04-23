@@ -146,8 +146,8 @@ public class Lobby implements Screen {
         String dots = new String(new char[(int)(System.currentTimeMillis() / 1000) % 4]).replace("\0", ".");
         smallFont.draw(game.batch, "Searching" + dots, -700, 325);
 
-        hudFont.draw(game.batch, "Lobby", 0, 0);
-        smallFont.draw(game.batch, ("Me: " + username + ", " + player_id), 0, -50);
+        hudFont.draw(game.batch, username, 0, 0);
+        smallFont.draw(game.batch, (player_id), 0, -50);
         if(ready) {
             statusFont.setColor(Color.GREEN);
             statusFont.draw(game.batch, "Ready", 0, -80);

@@ -44,6 +44,7 @@ public class MainMenu implements Screen {
         game.batch.setProjectionMatrix(hudCamera.combined);
 		game.batch.begin();
         
+        hudFont.draw(game.batch, "Final Project for COMP3010\nColton Dietterle\n\nPress space to begin", -700, 325);
         hudFont.draw(game.batch, "Main Menu", 0, 0);
 
 		game.batch.end();

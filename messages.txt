@@ -1,0 +1,117 @@
+The following is a list of TCP messages a client is expected to get.
+
+Each message will be described like this:
+- messagetype
+    arg1
+    arg2
+    ... (the order of the arguments is important)
+desc: (description)
+    
+
+LOBBY MESSAGES 
+
+- text
+    message (string)
+desc: print message to console, mainly used for testing 
+
+- status
+    who     (string, player id)
+    status  (bool)
+desc: update ready status of peer 'who' to status
+
+- choostHost
+    who     (string, player id)
+    time    (long)
+desc: when two peers are in the lobby, each sends this message to
+the other, the one with the lowest time becomes the host. 
+
+- setHost
+    who     (string, player id)
+desc: set lobby host to 'who'
+
+- startCountdown
+    time    (long)
+desc: start the lobby countdown, set to end at 'time' 
+
+- verifyLevel
+    hash    (int)
+desc: compate your hash to the given hash (for verifying everyone has the 
+same map)
+
+- abortCountdown
+desc: stop the current countdown 
+
+- startingInfo
+    x       (double)
+    y       (double)
+desc: set my start coordinates (for the game room) to x and y
+
+- checkIfConnected 
+    who     (string, player id)
+    port    (int)
+    username(string)
+    ip      (string)
+desc: check if I am connected to the peer 'who', if not, connect with the
+given ip,port,username,player id 
+
+
+GAMEROOM MESSAGES
+
+- text 
+    message (string)
+desc: print message to console 
+
+- startingInfo 
+    who     (string, player id) 
+    x       (float)
+    y       (float)
+desc: set 'who''s starting position to x and y in the game room 
+
+- position 
+    x       (float)
+    y       (float) 
+    who     (string, player id)
+desc: set who's position to x,y. This message is sent very frequently 
+
+- orbCollected
+    who     (string, player id)
+desc: set 'who' to be it 
+
+- targetTime
+    time    (long)
+desc: set countdown timer to end at 'time' 
+
+- tagged
+    newIt   (string, player id)
+    oldIt   (string, player id)
+    time    (long)
+desc: set newIt to be it, set oldIt to no longer be it. Keep track of 
+'time' to calculate scores 
+
+- scores
+    score (String consisting of a list of all the scores a peer has)
+desc: Sent to the host of the room. Once the host recieves this from all 
+the peers, calculate the mode score for each peer and send that score back
+to everyone. 
+
+- newScore 
+    who     (string, player id)
+    score   (int)
+desc: set who's score to 'score' 
+
+- setHost
+    who     (string, player id)
+desc: set who to be the host of the game 
+
+- respawnOrb 
+desc: respawn the orb on the map 
+
+- drawRope
+    who     (string, player id)
+    x       (float)
+    y       (float)
+desc: draw a rope on the screen between 'who' and (x,y)
+
+- destroyRope
+    who     (string, player id)
+desc: destroy the rope associated with 'who' 
