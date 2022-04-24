@@ -1,3 +1,7 @@
+/*
+Peer info class, only used for when first connecting to a peer
+*/
+
 package com.mygdx.game.utils;
 
 import javax.jmdns.ServiceInfo;

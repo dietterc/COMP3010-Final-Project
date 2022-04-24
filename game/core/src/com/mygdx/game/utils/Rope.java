@@ -1,3 +1,9 @@
+/*
+Very simple class for holding info for ropes
+The rope is drawn between (x,y) and player 
+
+*/
+
 package com.mygdx.game.utils;
 
 import com.mygdx.game.OtherPlayer;

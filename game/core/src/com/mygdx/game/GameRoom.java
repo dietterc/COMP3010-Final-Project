@@ -1,3 +1,10 @@
+/*
+The game room, all game logic is done here.
+
+Any networking done while the peers are in-game happens here
+
+*/
+
 package com.mygdx.game;
 
 import java.util.ArrayList;
@@ -8,7 +15,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.Input.Buttons;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -16,7 +22,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g3d.decals.CameraGroupStrategy;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.maps.MapLayer;
@@ -41,6 +46,8 @@ import com.mygdx.game.utils.*;
 
 public class GameRoom implements Screen {
     
+    //class variables, theres a lot here
+
     final ProjectMain game;
     final float WIDTH = 20;
     final float HEIGHT = 11.25f;
@@ -56,40 +63,39 @@ public class GameRoom implements Screen {
     private Player player;
 
     private Body playerBody;
-    RopeJoint RJ;
+    private RopeJoint RJ;
     private Array<Wall> grappleWalls;
     private float ropeLen;
     private Vector3 ropeTarget;
     private ArrayList<Rope> otherRopes;
 
-    BitmapFont hudFont;
-    BitmapFont nameFont;
-    BitmapFont smallFont;
+    private BitmapFont hudFont;
+    private BitmapFont nameFont;
+    private BitmapFont smallFont;
 
-    boolean clicked;
-    boolean orbCollected;
-    long timeCollected;
-    boolean isIt;
-    long targetTime;
-    int score;
-    long scoreTimer;
-    long taggedTime;
+    private boolean clicked;
+    private boolean orbCollected;
+    private boolean isIt;
+    private long targetTime;
+    private int score;
+    private long scoreTimer;
+    private long taggedTime;
 
     //host
-    int scores_gotten;
-    ArrayList<String> scoresToMode;
-    ArrayList<Integer> myScores;
+    private int scores_gotten;
+    private ArrayList<String> scoresToMode;
+    private ArrayList<Integer> myScores;
 
     //sprites
-    Sprite orbSprite;
-    Sprite playerSprite;
+    private Sprite orbSprite;
+    private Sprite playerSprite;
 
     //networking
-    String username;
-    String player_id;
-    boolean isHost;
-    boolean sendPositionData;
-    boolean allPeersHere;
+    private String username;
+    private String player_id;
+    private boolean isHost;
+    private boolean sendPositionData;
+    private boolean allPeersHere;
     public static ConcurrentLinkedQueue<String> messageQueue_gameroom;
     public static ArrayList<Peer> peer_list;
     public ArrayList<String> startTimes;
@@ -98,6 +104,7 @@ public class GameRoom implements Screen {
         this.game = game;
         camera = new OrthographicCamera(WIDTH,HEIGHT);
 
+        //Fonts 
         hudCamera = new OrthographicCamera(1440,810);
         hudFont = new BitmapFont(Gdx.files.internal("fonts/font.fnt"),
             Gdx.files.internal("fonts/font.png"), false);
@@ -107,24 +114,24 @@ public class GameRoom implements Screen {
         smallFont = new BitmapFont(Gdx.files.internal("fonts/small.fnt"),
             Gdx.files.internal("fonts/small.png"), false);
 
+        //physics world
         world = new World(new Vector2(0,-9.81f), true);
         debugRenderer = new Box2DDebugRenderer();
 
         player = new Player(world,(float)Lobby.startingX,(float)Lobby.startingY);
         playerBody = player.getBody();
 
-        //otherPlayer = new OtherPlayer(world, 0f,-37.5f);
-
+        //initalize my rope
         rope_init();
         ropeTarget = new Vector3();
         otherRopes = new ArrayList<Rope>();
 
+        //init the walls
         grappleWalls = new Array<Wall>();
         loadMap();
 
         initalizeSprites();
         orbCollected = false;
-        timeCollected = -1;
         score = 0;
         scoreTimer = 0;
         taggedTime = 0;
@@ -145,18 +152,19 @@ public class GameRoom implements Screen {
         isHost = Lobby.isHost;
         allPeersHere = false;
 
+        //move the lobby peer list to my own
         for(Peer p : Lobby.peer_list) {
             peer_list.add(p);
         }
         sendPositionData = false;
         targetTime = 0;
 
-        //do this stuff after a short delay
+        //do this stuff after a short delay to allow the other peers to connect
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(1000);
                 }
                 catch(InterruptedException e) {
                     e.printStackTrace();
@@ -175,10 +183,13 @@ public class GameRoom implements Screen {
 
     @Override
 	public void render(float delta) {
-        //big ol try catch so the game exits nicely on crash
+        //big ol try catch so the game exits properly on crash
+        //Without this the game window may close while the game still 'runs' 
+        // int the background 
         try {
             ScreenUtils.clear(0.5f, 0.5f, 0.5f, 1);
             
+            //physics step
             world.step(1/60f, 6, 2);
 
             //player/world drawing
@@ -241,15 +252,14 @@ public class GameRoom implements Screen {
 
             game.batch.end();
 
-            //physics
+            //more physics
             rope_step();
             player.step();
 
-            //game checks
+            //general game checks
             if(name.equals("") && !orbCollected) {
                 if(orbSprite.getBoundingRectangle().overlaps(playerSprite.getBoundingRectangle())) {
                     //since this is local, send a message to everyone stating the exact time you hit it
-                    timeCollected = System.currentTimeMillis();
                     orbCollected = true;
                     isIt = true;
                     playerSprite.setTexture(new Texture(Gdx.files.internal("itPlayer.png")));
@@ -295,6 +305,7 @@ public class GameRoom implements Screen {
                 Gdx.app.exit();
             }
 
+            //debug renderer for physics, uncomment for boxes and lines
             //debugRenderer.render(world, camera.combined);
         }
         catch(Exception e) {
@@ -302,14 +313,16 @@ public class GameRoom implements Screen {
         }
     }
 
+    //send a message to all peers 
     private void sendAllMessage(String message) {
         for(Peer p : peer_list) {
             p.sendMessage(message);
         }
     }
 
+    //big method to handle incomming messages 
+    //read descriptions for each message in messages.txt
     private void handleMessage(String message) {
-
         try {
 
             String lines[] = message.split(",");
@@ -420,7 +433,6 @@ public class GameRoom implements Screen {
             else if(type.equals("respawnOrb")) {
                 orbCollected = false;
             } 
-            //sendAllMessage("messagetype:drawRope," + player_id + "," + ropeTarget.x + "," + ropeTarget.y);
             else if(type.equals("drawRope")) {
                 String who = lines[1];
                 float x = Float.parseFloat(lines[2]);
@@ -478,7 +490,6 @@ public class GameRoom implements Screen {
 
             }
             
-
         }
         catch(Exception e) {
             System.out.println("Invalid message:\n" + message);
@@ -486,6 +497,7 @@ public class GameRoom implements Screen {
 
     }
 
+    //get the name of the player who is it
     private String getItPlayerName() {
         String retVal = "";
         if(allPeersHere) {
@@ -500,8 +512,8 @@ public class GameRoom implements Screen {
         return retVal;
     }
 
+    //in the physics world, move player to x and y
     private void moveOtherPlayer(float x, float y, String who) {
-
         for(Peer p:peer_list) {
             if(p.peer_id.equals(who)) {
                 Body body = p.playerInfo.getBody();
@@ -529,8 +541,8 @@ public class GameRoom implements Screen {
 
     }
 
+    //draw the scoreboard on the screen
     private void drawScoreboard(SpriteBatch batch) {
-
         class Score {
             int score;
             String name;
@@ -561,6 +573,7 @@ public class GameRoom implements Screen {
         }
     }
 
+    //check if I have been tagged
     private void checkIfTagged() {
         if(isIt) {
             for(Peer p:peer_list) {
@@ -592,6 +605,7 @@ public class GameRoom implements Screen {
         }
     }
 
+    //check if the game is over and determine the winner if it is
     private void checkIfDone() {
 
         if(targetTime != 0 && System.currentTimeMillis() >= targetTime) {
@@ -677,6 +691,9 @@ public class GameRoom implements Screen {
         scores_gotten = 0;
     }
 
+    //Methods needed for the Screen interface
+    //Since this is a prototype they aren't that important and I 
+    //chose to ignore them
     @Override
 	public void resize(int width, int height) {
 
@@ -702,6 +719,7 @@ public class GameRoom implements Screen {
 
 	}
 
+    //Nicely tell all my peers I am departing 
     @Override
 	public void dispose() {
         
@@ -758,8 +776,6 @@ public class GameRoom implements Screen {
             }
         }
 
-        
-
     }
 
     //set the camera to smoothly follow the player
@@ -781,7 +797,6 @@ public class GameRoom implements Screen {
     }
 
     private void loadMap() {
-       
 
         TiledMap tiledMap = new TmxMapLoader().load("map.tmx");
 			//TiledMap tiledMap = new TmxMapLoader().load("levels/testlevel.tmx");

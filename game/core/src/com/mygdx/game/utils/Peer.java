@@ -1,3 +1,10 @@
+/*
+Peer object
+Holds the connection to this peers server as well as 
+any info needed for the peers
+
+*/
+
 package com.mygdx.game.utils;
 
 import java.io.BufferedWriter;
@@ -6,12 +13,7 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Sprite;
-import com.mygdx.game.Lobby;
 import com.mygdx.game.OtherPlayer;
-
 
 public class Peer {
 
@@ -51,7 +53,8 @@ public class Peer {
             out.flush();
         }
         catch(Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            System.out.println("Error connectiong to peer " + peer_id);
         }
 
         playerInfo = null;
@@ -63,6 +66,7 @@ public class Peer {
 
     }
 
+    //send a message to the peer
     public void sendMessage(String message) {
         try {
             out.write(message);
@@ -70,7 +74,7 @@ public class Peer {
             out.flush();
         }
         catch (IOException e) {
-            //e.printStackTrace();
+            System.out.println("Error sending message: " + message);
         }
         
     }
@@ -88,7 +92,7 @@ public class Peer {
             socket.close();
         }
         catch(Exception e) {
-
+            System.out.println("Error closing peer " + peer_id);
         }
         
     }

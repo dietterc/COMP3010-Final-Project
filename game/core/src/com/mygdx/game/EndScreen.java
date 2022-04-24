@@ -1,9 +1,13 @@
+/*
+Room for the end screen
+
+Not much goes on here
+
+*/
+
 package com.mygdx.game;
 
-import java.util.UUID;
-
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -51,8 +55,9 @@ public class EndScreen implements Screen {
     }
 
     
-
-
+    //Methods needed for the Screen interface
+    //Since this is a prototype they aren't that important and I 
+    //chose to ignore them
     @Override
 	public void resize(int width, int height) {
 

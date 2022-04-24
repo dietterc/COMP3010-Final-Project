@@ -1,8 +1,15 @@
+/*
+Thread for handling a client connection 
+Gets messages and passes it to either the lobby or gameRoom 
+
+Can also detect when a client disconnects 
+
+*/
+
 package com.mygdx.game.utils;
 import java.io.*;
 import java.net.*;
 
-import com.badlogic.gdx.Game;
 import com.mygdx.game.GameRoom;
 import com.mygdx.game.Lobby;
 
@@ -48,8 +55,8 @@ public class ClientHandlerThread extends Thread {
             } 
             socket.close();
         } catch (Exception ex) {
-            //System.out.println("Server exception: " + ex.getMessage());
-            //ex.printStackTrace();
+            //close the peer, do anything else needed
+
             Peer disconnectedPeer = null;
             if(Lobby.inLobby) {
                 for(Peer p : Lobby.peer_list) {
