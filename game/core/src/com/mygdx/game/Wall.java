@@ -1,3 +1,12 @@
+/*
+A wall square
+
+Holds a sprite, the physics body, and its position 
+
+All larger walls are made up of these squares, and each square can be grappled to.
+
+*/
+
 package com.mygdx.game;
 
 import com.badlogic.gdx.Gdx;

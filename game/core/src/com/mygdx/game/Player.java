@@ -1,3 +1,10 @@
+/*
+The playable character class
+
+Holds the physics body/sprite and controls the players boost 
+
+*/
+
 package com.mygdx.game;
 
 import com.badlogic.gdx.Gdx;
@@ -69,6 +76,7 @@ public class Player {
         return physicsBody;
     }
 
+    //get my current fuel for printing
     public int getFuel() {
         return currentFuel;
     }

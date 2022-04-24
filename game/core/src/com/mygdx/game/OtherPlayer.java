@@ -1,5 +1,11 @@
-package com.mygdx.game;
+/*
+In-game object representing another peer
 
+Holds the physics body/sprite/position of the peer on screen
+
+*/
+
+package com.mygdx.game;
  
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
@@ -50,7 +56,7 @@ public class OtherPlayer {
     }
 
     public void init_physics(float startX, float startY, World world) {
-        //Set up physics body as a circle, specifically a STATIC body. Since I think we will only be setting its pos directly
+        //Set up physics body as a circle, specifically a STATIC body. Since we will only be setting its pos directly
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.StaticBody;
         bodyDef.position.set(startX, startY); //starting position

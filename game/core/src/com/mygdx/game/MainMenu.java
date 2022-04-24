@@ -1,3 +1,9 @@
+/*
+Main menu class
+
+gets the players username and sends them to the lobby
+*/
+
 package com.mygdx.game;
 
 import java.util.UUID;
@@ -61,7 +67,6 @@ public class MainMenu implements Screen {
 
         if(!username.equals("")) {
             String id = UUID.randomUUID().toString();
-            //game.setScreen(new GameRoom(game));
             if(normal)
                 lobby = new Lobby(game,username,id,true,"",0);
             else
@@ -74,6 +79,7 @@ public class MainMenu implements Screen {
         }
     }
 
+    //simple textbox to get a username
     private void getUsername() {
         class TextListener implements Input.TextInputListener {
             @Override
@@ -89,6 +95,8 @@ public class MainMenu implements Screen {
         Gdx.input.getTextInput(new TextListener(),"Enter a Username","","username");
     }
 
+    //special textbox that gets the username, ip, and port of a known peer
+    //really just used for debugging/bypassing mDNS
     private void getUsernameAndIp() {
         class TextListener implements Input.TextInputListener {
             @Override
@@ -114,7 +122,8 @@ public class MainMenu implements Screen {
         Gdx.input.getTextInput(new TextListener(),"Enter a Username, ip, and port separated by commas","","username,192.168...,25565");
     }
 
-
+    //required interface methods 
+    //can be ignored because this is just a prototype
     @Override
 	public void resize(int width, int height) {
 

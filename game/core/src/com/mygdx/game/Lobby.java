@@ -40,6 +40,7 @@ public class Lobby implements Screen {
     final ProjectMain game;
     final int startingPort = 25565;
     final int COUNTDOWN = 6000;
+    //list of possible spawn points
     final double xSpawnPoints[] = {0.25,1.5,2.75,4.25,5.50,6.85,8.25,16.25,17.5,18.9,20.25,21.5,22.9,24.25};
     final double ySpawnPoint = -15.25;
 
@@ -50,9 +51,9 @@ public class Lobby implements Screen {
 
     public static ArrayList<Peer> peer_list;
 
+    //networking
     private JmDNS jmdns;
     private ServiceInfo serviceInfo;
-    private boolean do_mDNS = true;
     private String directIP;
     private int directPort;
     public ArrayList<String> startTimes;
@@ -69,6 +70,7 @@ public class Lobby implements Screen {
     public static String username;
     public static String player_id;
 
+    //my starting position in the next room
     public static double startingX;
     public static double startingY;
 
@@ -108,7 +110,6 @@ public class Lobby implements Screen {
         else 
             directConnect();
     
-
         countdownTarget = 0;
         countingDown = false;
 
@@ -234,13 +235,15 @@ public class Lobby implements Screen {
         }
     }
 
-    void sendAllMessage(String message) {
+    private void sendAllMessage(String message) {
         for(Peer p : peer_list) {
             p.sendMessage(message);
         }
     }
 
-    void handleMessage(String message) {
+    //method for handling incomming messages 
+    //Descriptions of each can be found in messages.txt
+    private void handleMessage(String message) {
         //System.out.println("Message: " + message);
         try {
 
@@ -380,7 +383,6 @@ public class Lobby implements Screen {
         
     }
 
-    //needs to be fixed so its not platform dependent
     private int calculateHash() {
         //simple hash function (sum the times 'o' appears in the map)
         //each tile on the map (a point that can be grappled) is listed as 
@@ -397,6 +399,7 @@ public class Lobby implements Screen {
         return sum;
     }
 
+    //check if all peers are ready
     private void checkReadyStatus() {
 
         int score = 0;
@@ -423,6 +426,9 @@ public class Lobby implements Screen {
         }
     }
 
+    //start the countdown 
+    //assign roles if the host
+    //send my level data to everyone else to make sure everyone has the same map
     private void startCountdown(long time) {
         countdownTarget = time;
         countingDown = true;
@@ -459,6 +465,7 @@ public class Lobby implements Screen {
         startingY = y;
     }
 
+    //set up the tcp server
     private void tcpSetup() {
 
         //start a tcp server on a thread
@@ -467,6 +474,7 @@ public class Lobby implements Screen {
             public void run() {
                
                 try {
+                    //try different ports until we get one that works 
                     boolean portFound = false;
 
                     while(!portFound) {
@@ -479,6 +487,7 @@ public class Lobby implements Screen {
                         }
                     }
                     while(true) {
+                        //create a new thread for each incomming connection 
                         clientSocket = serverSocket.accept();
                         new ClientHandlerThread(clientSocket).start();
                     }
@@ -491,11 +500,13 @@ public class Lobby implements Screen {
 
     }
 
+    //setup mDNS
     private void mdnsSetup() {
         
         //set up listener/listener class for incoming connections
         class mDNSListener implements ServiceListener {
-    
+            
+            //added and removed are here because it is required by the interface
             @Override
             public void serviceAdded(ServiceEvent event) {
                 //System.out.println("Service added: " + event.getName());
@@ -509,6 +520,7 @@ public class Lobby implements Screen {
             @Override
             public void serviceResolved(ServiceEvent event) {
                 //System.out.println("Service resolved: " + event.getName());
+                //new service found, make sure its for this game
 
                 if(event.getName().equals("comp3010FP") && !event.getInfo().getNiceTextString().equals("\\00")) {
                     String data = event.getInfo().getNiceTextString().substring(1);
@@ -533,7 +545,6 @@ public class Lobby implements Screen {
                     if(!found && !newPeer.peer_id.equals(player_id)) {
                         System.out.println("Client " + player_id + " discovered: " + newPeer.peer_id);
                         connectToPeer(newPeer);
-                        //peer_list.add(newPeer);
                     }
                     
                 }
@@ -543,7 +554,7 @@ public class Lobby implements Screen {
         
 		try {
             jmdns = JmDNS.create(InetAddress.getLocalHost());
-            // Add service listener
+            //Add a service listener, checks for mDNS packets
             jmdns.addServiceListener("_http._tcp.local.", new mDNSListener());
 
 
@@ -552,8 +563,6 @@ public class Lobby implements Screen {
 		} catch (IOException e) {
             System.out.println(e.getMessage());
         } 
-
-        //add myself to the list of peers
 
         //Broadcast myself as a mDNS service
         try {
@@ -568,10 +577,9 @@ public class Lobby implements Screen {
 	}
 
     private void directConnect() {
-
-        //connect to peer with invalid info
-        //This just tells the peer I am here, so then the flooding protocol will kick in
-        // and then connect everyone. This invalid peer will be deleted automatically
+        //connect to peer with temp invalid info
+        //This just directly tells a peer that I am here, so then the flooding protocol will kick in
+        // and then connect everyone properly. This invalid peer will be deleted automatically
         PeerInfo newPeer = new PeerInfo(directIP,directPort);
         System.out.println("Attempting to connect to: " + directIP + ":" + directPort);
         connectToPeer(newPeer);
@@ -581,8 +589,8 @@ public class Lobby implements Screen {
     //Once a peer is found with mDNS, try to establish a tcp connection
     private void connectToPeer(PeerInfo peer) {
 
+        //this constructure/peer object has the actual socket connection
         Peer newPeer = new Peer(peer.ip, peer.peer_id, peer.port, player_id, peer.username);
-        //newPeer.sendMessage("Hello, I am " + player_id);
 
         boolean found = false;
         for(Peer p: peer_list) {
@@ -600,7 +608,8 @@ public class Lobby implements Screen {
             } catch (UnknownHostException e) {
                 e.printStackTrace();
             }
-            //ask if this connection is mutual
+            //ask if this connection is mutual (flooding)
+            //this is described fully in my video and written report
             newPeer.sendMessage("messagetype:checkIfConnected," + player_id + "," + activePort + "," + username + "," + ip);
             //send them a list of all of our peers too
             for(Peer p: peer_list) {
@@ -621,6 +630,8 @@ public class Lobby implements Screen {
     }
 
 
+    //required interface methods 
+    //not used becuase this is just a prototype
     @Override
 	public void resize(int width, int height) {
 
@@ -667,7 +678,6 @@ public class Lobby implements Screen {
         }
 
 		jmdns.unregisterService(serviceInfo);
-        //System.out.println("Hello!");
 	}
 
 
