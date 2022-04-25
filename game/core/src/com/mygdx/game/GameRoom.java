@@ -239,7 +239,7 @@ public class GameRoom implements Screen {
                     camera.project(vec);
                     nameFont.draw(game.batch, p.name, vec.x-735, vec.y-355);
                 }    
-                if(p.isHost) {
+                if(p.isHost && !isHost) {
                     smallFont.draw(game.batch, "Host: " + p.name, 50, 375);
                 } 
             }
